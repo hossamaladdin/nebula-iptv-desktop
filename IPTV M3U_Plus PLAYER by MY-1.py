@@ -386,6 +386,15 @@ class IPTVPlayerApp(QMainWindow):
         self._tv_toggle_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         self._tv_toggle_shortcut.activated.connect(self._toggle_tv_view)
 
+        # In TV view, M toggles the sliding menu (open / close).
+        self._tv_menu_shortcut = QShortcut(QKeySequence("M"), self)
+        self._tv_menu_shortcut.setContext(Qt.ApplicationShortcut)
+        self._tv_menu_shortcut.activated.connect(self._toggle_tv_menu)
+
+    def _toggle_tv_menu(self):
+        if self._main_stack.currentIndex() == 1 and self._tv_root is not None:
+            self._tv_root.toggle_menu()
+
     def updateUserDataFile(self):
         # Load the configuration file. A corrupted .ini must not crash the app —
         # fall back to a fresh config so the user can re-add accounts.
@@ -2779,25 +2788,44 @@ class IPTVPlayerApp(QMainWindow):
         self._main_stack.addWidget(self._tv_root)  # page 1
         return self._tv_root
 
+    def _enter_tv_view(self):
+        # Re-parent the V2 tab widget into the sliding menu — the user still
+        # gets the familiar LIVE/Movies/Series UI, just inside the translucent
+        # overlay instead of filling the window.
+        tv = self._ensure_tv_root()
+        if tv is None:
+            return False
+        tv.set_menu_content(self.tab_widget)
+        self._main_stack.setCurrentIndex(1)
+        return True
+
+    def _exit_tv_view(self):
+        # Move the tab widget back to the classic layout. The classic layout's
+        # QVBoxLayout still has a slot for it (we added progress_bar after).
+        classic = self._main_stack.widget(0)
+        layout = classic.layout()
+        layout.insertWidget(0, self.tab_widget)  # re-insert at top
+        self._main_stack.setCurrentIndex(0)
+
     def _toggle_tv_view(self):
-        """Ctrl+T or the TV button: flip between classic tabs and TV view."""
+        """Ctrl+T flips between classic tabs and TV view."""
         if self._main_stack.currentIndex() == 0:
-            tv = self._ensure_tv_root()
-            if tv is None:
-                return
-            self._main_stack.setCurrentIndex(1)
+            self._enter_tv_view()
         else:
-            self._main_stack.setCurrentIndex(0)
+            self._exit_tv_view()
 
     def _play_embedded(self, url):
         # V3 TV mode: if the user has TV view turned on, play into the in-window
-        # video frame and flip the stack to it. The classic V2 floating window
-        # is still used when TV mode is off (so this is a strict additive change).
+        # video frame and flip the stack to it. _enter_tv_view re-parents the
+        # tab widget into the sliding menu the first time it runs; subsequent
+        # calls are idempotent.
         if getattr(self, '_tv_mode_default', False):
-            tv = self._ensure_tv_root()
-            if tv is not None:
-                tv.play_url(url)
-                self._main_stack.setCurrentIndex(1)
+            if self._main_stack.currentIndex() != 1:
+                if not self._enter_tv_view():
+                    # libvlc unavailable — fall through to the V2 floating-window path.
+                    pass
+            if self._main_stack.currentIndex() == 1 and self._tv_root is not None:
+                self._tv_root.play_url(url)
                 self.animate_progress(0, 100, "Playing in TV view")
                 return
 
