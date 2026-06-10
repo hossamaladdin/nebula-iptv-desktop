@@ -1,0 +1,22 @@
+[
+    {
+        'category_id': '1436', 
+        'category_name': 'AR| HBO', 
+        'parent_id': 0
+    },
+    {
+        'category_id': '1525', 
+        'category_name': 'US| FLO SPORTS PPV', 
+        'parent_id': 0
+    },
+    {
+        'category_id': '1983', 
+        'category_name': 'SWEDEN DISNEY+ PPV', 
+        'parent_id': 0
+    }, 
+    {
+        'category_id': '1233', 
+        'category_name': 'FINLAND VIAPLAY PPV', 
+        'parent_id': 0
+    }
+]

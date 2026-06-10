@@ -1,0 +1,50 @@
+[
+    {
+        'num': 34,
+        'name': 'TGK| TOJIKISTON',
+        'stream_type': 'live', 
+        'stream_id': 827343, 
+        'stream_icon': 'http://103.176.90.118/picons/logos/TOJIKISTON-TV.jpg', 
+        'epg_channel_id': '', 
+        'added': '1642075873', 
+        'is_adult': 0, 
+        'category_id': '33',   
+        'category_ids': [33], 
+        'custom_sid': None, 
+        'tv_archive': 0, 
+        'direct_source': '', 
+        'tv_archive_duration': 0
+    }, 
+    {
+        'num': 35, 
+        'name': 'TGK| VARZISH SPORT HD', 
+        'stream_type': 'live', 
+        'stream_id': 827347, 
+        'stream_icon': 'http://103.176.90.118/picons/logos/VARZISH-SPORT-HD.jpg', 
+        'epg_channel_id': '', 
+        'added': '1642075873', 
+        'is_adult': 0, 
+        'category_id': '33', 
+        'category_ids': [33], 
+        'custom_sid': None, 
+        'tv_archive': 0, 
+        'direct_source': '', 
+        'tv_archive_duration': 0
+    }, 
+    {
+        'num': 6, 
+        'name': 'BE-VIP| DAZN PRO LEAGUE 1 NL ᴿᴬᵂ', 
+        'stream_type': 'live', 
+        'stream_id': 1668298, 
+        'stream_icon': 'http://103.176.90.118/piconsnew/dazn1.png', 
+        'epg_channel_id': '', 
+        'added': '1728502602', 
+        'is_adult': 0, 
+        'category_id': '1963', 
+        'category_ids': [1963], 
+        'custom_sid': None, 
+        'tv_archive': 0, 
+        'direct_source': '', 
+        'tv_archive_duration': 0
+    }
+]

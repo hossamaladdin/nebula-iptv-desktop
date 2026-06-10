@@ -1,0 +1,16 @@
+config.ini
+credentials.ini
+Backups/
+__pycache__/
+Pyinstaller/
+Raw IPTV data/
+all_cached_data.json
+userdata.ini
+build/
+IPTV_Player.spec
+IPTV_Player_with_debug_console.spec
+lib/
+IPTV screenshots/
+favorites.json
+dist/
+vlc_log.txt

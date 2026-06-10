@@ -1,0 +1,44 @@
+[
+    {
+        'num': 125, 
+        'name': 'IT - Echo 3 (2022)', 
+        'series_id': 35315, 
+        'cover': 'https://image.tmdb.org/t/p/w600_and_h900_bestv2/xG94Dc7LJ0NEYZ0hGTNnHuMKugl.jpg', 
+        'plot': "Quando la brillante scienziata Amber Chesborough scompare lungo il confine tra Colombia e Venezuela, suo fratello e suo marito, entrambi commando d'élite dell'esercito americano, lottano per trovarla durante una guerriglia, scoprendo che la donna che amano potrebbe avere un segreto.", 
+        'cast': 'Luke Evans, Michiel Huisman, Jessica Collins, James Udom, Elizabeth Anweis, Martina Gusmán', 
+        'director': 'Mark Boal', 
+        'genre': 'Dramma / Action & Adventure', 
+        'releaseDate': '', 
+        'last_modified': '1722266757', 
+        'rating': '7', 
+        'rating_5based': '3.5', 
+        'backdrop_path': 
+            ['https://image.tmdb.org/t/p/w1280/hTGqvVsvvCQGMOKUfNZ6n371QHG.jpg', 'https://image.tmdb.org/t/p/w1280/mWrvvNCVQNfxSmYshRS9DOtLgZ.jpg', 'https://image.tmdb.org/t/p/w1280/pI7yTuwl9lRfj8GHEhSHwjmt478.jpg', 'https://image.tmdb.org/t/p/w1280/jWONtuafwGhAkvD4dfbILioAshs.jpg', 'https://image.tmdb.org/t/p/w1280/pmzWrZRXePyrjWmnN1xu7WAH35l.jpg'], 
+        'youtube_trailer': '41gTgAK6snk', 
+        'tmdb': '106116', 
+        'episode_run_time': '0', 
+        'category_id': '1012', 
+        'category_ids': [1012]
+    }, 
+    {
+        'num': 126, 
+        'name': 'IT - In difesa di Jacob (2020)', 
+        'series_id': 35316, 
+        'cover': 'https://image.tmdb.org/t/p/w600_and_h900_bestv2/geLPm2akwvHnm01FyifEzwrgNYz.jpg', 
+        'plot': 'Le vite di una famiglia vengono irreparabilmente sconvolte quando il figlio viene accusato dell’omicidio di un suo compagno di classe.', 
+        'cast': 'Chris Evans, Michelle Dockery, Jaeden Martell, Cherry Jones, Pablo Schreiber, Betty Gabriel, Sakina Jaffrey, Daniel Henshall', 
+        'director': 'Mark Bomback', 
+        'genre': 'Dramma / Mistero / Crime', 
+        'releaseDate': '', 
+        'last_modified': '1722267059', 
+        'rating': '8', 
+        'rating_5based': '4', 
+        'backdrop_path': 
+            ['https://image.tmdb.org/t/p/w1280/9wCsImxDW4MCVP47vVjny0Wa06s.jpg', 'https://image.tmdb.org/t/p/w1280/7jH0k0yGr9mWJ1fRHphMPYwrcI1.jpg', 'https://image.tmdb.org/t/p/w1280/dGUP87aNfcSIFcX0JOWfogvPv53.jpg', 'https://image.tmdb.org/t/p/w1280/A84Udi14ewFd6jw1sN3ziWeRS2R.jpg', 'https://image.tmdb.org/t/p/w1280/ovmSC0YjqPu97ZntCSV2zOQNW7a.jpg'], 
+        'youtube_trailer': '5QJPL-m81pQ', 
+        'tmdb': '87784', 
+        'episode_run_time': '0', 
+        'category_id': '1012', 
+        'category_ids': [1012]
+    }
+]

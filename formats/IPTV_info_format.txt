@@ -1,0 +1,30 @@
+{
+  "user_info": {
+    "username": "c0f0824a07",
+    "password": "efcccdc986",
+    "message": "",
+    "auth": 1,
+    "status": "Active",
+    "exp_date": "1746309600",
+    "is_trial": "0",
+    "active_cons": "1",
+    "created_at": "1714773600",
+    "max_connections": "1",
+    "allowed_output_formats": [
+      "m3u8",
+      "ts",
+      "rtmp"
+    ]
+  },
+  "server_info": {
+    "url": "line.rs6ott.com",
+    "port": "80",
+    "https_port": "443",
+    "server_protocol": "http",
+    "rtmp_port": "25462",
+    "timezone": "Europe/Amsterdam",
+    "timestamp_now": 1735916482,
+    "time_now": "2025-01-03 16:01:22",
+    "process": true
+  }
+}

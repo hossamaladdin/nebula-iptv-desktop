@@ -1,0 +1,32 @@
+{'epg_listings': 
+    [
+        {
+            'id': '19335870', 
+            'epg_id': '104', 
+            'title': 'RHJvb21odWlzIEdlem9jaHQ=', 
+            'lang': '', 
+            'start': '2024-12-27 23:25:00', 
+            'end': '2024-12-28 00:15:00', 
+            'description': 'SW4gZGV6ZSBzcGVjaWFsZSBhZmxldmVyaW5nIGJsaWtrZW4gQ2FycmllIGVuIERpb25uZSBtZXQgdmVyc2NoaWxsZW5kZSBkZWVsbmVtZXJzIHRlcnVnIG9wIGh1biBhdm9udHV1ci4gWm8gYmV6b2VrZW4gemUgTWFyam9sZWluIGVuIExlb24gb3AgZWVuIGNhbXBpbmcgaW4gTmVkZXJsYW5kLCB3YWFyIHplIGhvcmVuIGhvZSBodW4gT29zdGVucmlqa3NlIGF2b250dXVyIGVlbiBvbnZlcndhY2h0ZSB3ZW5kaW5nIGtyZWVnLg==', 
+            'channel_id': 'NPO1.nl', 
+            'start_timestamp': '1735338300', 
+            'stop_timestamp': '1735341300', 
+            'stream_id': '1282714'
+        }, 
+        {
+            'id': '21143831', 
+            'epg_id': '104', 
+            'title': 'VG9wIDIwMDAgYSBnb2dv', 
+            'lang': '', 'start': '2024-12-28 00:15:00', 'end': '2024-12-28 01:20:00', 'description': 'SGlwaG9wIGluIEFtc3RlcmRhbSBpbiBkZSBqYXJlbiB0YWNodGlnIGVuIHJlcG9ydGFnZXMgb3ZlciAnQ29sb3JzJyB2YW4gZGUgQmxhY2sgUHVtYXMgZW4gJ1doYXQncyBhIHdvbWFuJyB2YW4gVmF5YSBDb24gRGlvcy4gRGUgcXVpeiBkb29yIEFhZiBCcmFuZHQgQ29yc3RpdXMgZW4gU2pvcnMgRnLDtmhsaWNoIHZlcnRlbHQgb3ZlciB6aWpuIG51bW1lciAxLg==', 'channel_id': 'NPO1.nl', 'start_timestamp': '1735341300', 'stop_timestamp': '1735345200', 
+            'stream_id': '1282714'
+        }, 
+        {
+            'id': '21143832', 'epg_id': '104', 'title': 'SGV0IHZlcmhhYWwgdmFuIE5lZGVybGFuZCAtIE9yYW5qZSBOYXNzYXU=', 'lang': '', 'start': '2024-12-28 01:20:00', 'end': '2024-12-28 02:15:00', 'description': 'RGUgZmFtaWxpZSBPcmFuamUtTmFzc2F1IGlzIG5pZXQgbWVlciB3ZWcgdGUgZGVua2VuIHVpdCBOZWRlcmxhbmQuIEVldXdlbmxhbmcgc3BlbGVuIHplIGVlbiByb2wgdmFuIGJldGVrZW5pcyBpbiBvbnplIGdlc2NoaWVkZW5pcywgbWlkZGVuIGluIGhldCBjZW50cnVtIHZhbiBkZSBtYWNodCwgaW4gZ29lZGUgZW4gaW4gc2xlY2h0ZSB0aWpkZW4u', 'channel_id': 'NPO1.nl', 'start_timestamp': '1735345200', 'stop_timestamp': '1735348500', 
+            'stream_id': '1282714'
+        }, 
+        {
+            'id': '21143833', 'epg_id': '104', 'title': 'Tk9TIEpvdXJuYWFs', 'lang': '', 'start': '2024-12-28 02:15:00', 'end': '2024-12-28 02:35:00', 'description': 'TWV0IGhldCBsYWF0c3RlIG5pZXV3cywgZ2ViZXVydGVuaXNzZW4gdmFuIG5hdGlvbmFhbCBlbiBpbnRlcm5hdGlvbmFhbCBiZWxhbmcgZW4gZGUgd2VlcnN2ZXJ3YWNodGluZyB2b29yIGRlIGF2b25kIGVuIGtvbWVuZGUgZGFnZW4u', 'channel_id': 'NPO1.nl', 'start_timestamp': '1735348500', 'stop_timestamp': '1735349700', 
+            'stream_id': '1282714'
+        }
+    ]
+}

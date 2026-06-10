@@ -1,0 +1,220 @@
+{
+    'seasons': [], 
+    'info': 
+    {
+        'name': 'EN - BEYOND (2017)', 
+        'cover': 'http://103.176.90.118/stalker_portal/screenshots/166/16506.jpg', 
+        'plot': 'Holden wakes up from a coma after 12 years and discovers new abilities that propel him into the middle of a dangerous conspiracy.', 
+        'cast': 'Burkely Duffield, Dilan Gwyn, Jonathan Whitesell, Eden Brolin, Jeff Pierre, Romy Rosemont, Michael McGrady', 
+        'director': 'Adam Nussdorf', 
+        'genre': 'Drama / Sci-Fi & Fantasy', 
+        'releaseDate': '2017-01-01', 
+        'last_modified': '1728265440', 
+        'rating': '6', 
+        'rating_5based': '3', 
+        'backdrop_path': 
+            ['https://image.tmdb.org/t/p/w1280/kZAI2kD1v9JsU6GIc00dgZ2DI9H.jpg', 'https://image.tmdb.org/t/p/w1280/uc69MIzQVSMphcIR2O38I7WiFQA.jpg', 'https://image.tmdb.org/t/p/w1280/9wA75KqDjMFTzpBy53mAGtenW8p.jpg', 'https://image.tmdb.org/t/p/w1280/oo7nN1N5FcdO9u1IBZvgJ4FnHZG.jpg', 'https://image.tmdb.org/t/p/w1280/nhfnyJZbPA1bQh0HevlOoPvUVoG.jpg'], 
+        'tmdb': '67726', 
+        'youtube_trailer': 'X8e0FkjzSkI', 
+        'episode_run_time': '43', 
+        'category_id': '486', 
+        'category_ids': [486]
+    }, 
+    'episodes': 
+    {
+        '1': 
+        [
+            {
+                'id': '1665137', 
+                'episode_num': 1, 
+                'title': 'EN - BEYOND (2017) - S01E01 - Pilot', 'container_extension': 'mkv', 'info': {'air_date': '2017-01-01', 'rating': 6.5, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/ktWUJhduovhYJVYa9FQdBCq7OLE.jpg', 'duration_secs': 2589, 'duration': '00:43:09', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS-eng': '1638618', 'DURATION-eng': '00:43:09.504000000', 'NUMBER_OF_FRAMES-eng': '62086', 'NUMBER_OF_BYTES-eng': '530401149', '_STATISTICS_WRITING_APP-eng': "mkvmerge v24.0.0 ('Beyond The Pale') 64-bit", '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-30 22:16:45', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS-eng': '431841', 'DURATION-eng': '00:43:09.717000000', 'NUMBER_OF_FRAMES-eng': '121393', 'NUMBER_OF_BYTES-eng': '139793344', '_STATISTICS_WRITING_APP-eng': "mkvmerge v24.0.0 ('Beyond The Pale') 64-bit", '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-30 22:16:45', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 2073}, 'custom_sid': None, 'added': '1728244764', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665138', 
+                'episode_num': 2, 
+                'title': 'EN - BEYOND (2017) - S01E02 - Tempus Fugit', 'container_extension': 'mkv', 'info': {'air_date': '2017-01-02', 'rating': 3.8, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/yOq6IjhUtPxLHY39NATGDdQLHeI.jpg', 'duration_secs': 2568, 'duration': '00:42:48', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS': '1970126', 'BPS-eng': '1970126', 'DURATION': '00:42:47.941000000', 'DURATION-eng': '00:42:47.941000000', 'NUMBER_OF_FRAMES': '61569', 'NUMBER_OF_FRAMES-eng': '61569', 'NUMBER_OF_BYTES': '632395956', 'NUMBER_OF_BYTES-eng': '632395956', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-28 12:35:28', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-28 12:35:28', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 0, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS': '353357', 'BPS-eng': '353357', 'DURATION': '00:42:48.192000000', 'DURATION-eng': '00:42:48.192000000', 'NUMBER_OF_FRAMES': '120384', 'NUMBER_OF_FRAMES-eng': '120384', 'NUMBER_OF_BYTES': '113436129', 'NUMBER_OF_BYTES-eng': '113436129', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-28 12:35:28', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-28 12:35:28', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 2326}, 'custom_sid': None, 'added': '1728244764', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665139', 
+                'episode_num': 3, 
+                'title': 'EN - BEYOND (2017) - S01E03 - Ties That Bind', 'container_extension': 'mkv', 'info': {'air_date': '2017-01-09', 'rating': 4.5, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/7M0f8KGfS5AxNiIoNdOosk2vvDx.jpg', 'duration_secs': 2572, 'duration': '00:42:52', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS': '1464614', 'BPS-eng': '1464614', 'DURATION': '00:42:52.028000000', 'DURATION-eng': '00:42:52.028000000', 'NUMBER_OF_FRAMES': '61667', 'NUMBER_OF_FRAMES-eng': '61667', 'NUMBER_OF_BYTES': '470878828', 'NUMBER_OF_BYTES-eng': '470878828', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-28 17:21:34', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-28 17:21:34', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 0, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS': '368488', 'BPS-eng': '368488', 'DURATION': '00:42:52.309000000', 'DURATION-eng': '00:42:52.309000000', 'NUMBER_OF_FRAMES': '120577', 'NUMBER_OF_FRAMES-eng': '120577', 'NUMBER_OF_BYTES': '118483311', 'NUMBER_OF_BYTES-eng': '118483311', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-28 17:21:34', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-28 17:21:34', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 1836}, 'custom_sid': None, 'added': '1728244764', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665140', 
+                'episode_num': 4, 
+                'title': 'EN - BEYOND (2017) - S01E04 - The Man in the Yellow Jacket', 'container_extension': 'mkv', 'info': {'air_date': '2017-01-16', 'rating': 7, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/zWgNuQy7yGuKEY93k7GWsScZNo4.jpg', 'duration_secs': 2565, 'duration': '00:42:45', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS': '1386342', 'BPS-eng': '1386342', 'DURATION': '00:42:45.146000000', 'DURATION-eng': '00:42:45.146000000', 'NUMBER_OF_FRAMES': '61502', 'NUMBER_OF_FRAMES-eng': '61502', 'NUMBER_OF_BYTES': '444521378', 'NUMBER_OF_BYTES-eng': '444521378', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 01:59:35', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 01:59:35', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 0, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS': '332373', 'BPS-eng': '332373', 'DURATION': '00:42:45.333000000', 'DURATION-eng': '00:42:45.333000000', 'NUMBER_OF_FRAMES': '120250', 'NUMBER_OF_FRAMES-eng': '120250', 'NUMBER_OF_BYTES': '106580941', 'NUMBER_OF_BYTES-eng': '106580941', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 01:59:35', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 01:59:35', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 1721}, 'custom_sid': None, 'added': '1728244764', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665141', 
+                'episode_num': 5, 
+                'title': 'EN - BEYOND (2017) - S01E05 - Fancy Meeting You Here', 'container_extension': 'mkv', 'info': {'air_date': '2017-01-23', 'rating': 7, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/9IqpR1YQWW6YSUE2xkziARrlB40.jpg', 'duration_secs': 2528, 'duration': '00:42:08', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS': '1849433', 'BPS-eng': '1849433', 'DURATION': '00:42:07.901000000', 'DURATION-eng': '00:42:07.901000000', 'NUMBER_OF_FRAMES': '60609', 'NUMBER_OF_FRAMES-eng': '60609', 'NUMBER_OF_BYTES': '584398109', 'NUMBER_OF_BYTES-eng': '584398109', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 07:27:40', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 07:27:40', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 0, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS': '390239', 'BPS-eng': '390239', 'DURATION': '00:42:08.085000000', 'DURATION-eng': '00:42:08.085000000', 'NUMBER_OF_FRAMES': '118504', 'NUMBER_OF_FRAMES-eng': '118504', 'NUMBER_OF_BYTES': '123319753', 'NUMBER_OF_BYTES-eng': '123319753', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 07:27:40', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 07:27:40', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 2242}, 'custom_sid': None, 'added': '1728244764', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665142', 
+                'episode_num': 6, 
+                'title': 'EN - BEYOND (2017) - S01E06 - Celeste', 'container_extension': 'mkv', 'info': {'air_date': '2017-01-30', 'rating': 7, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/9L4E0B8XhuwFyINZhahp4vFDuP5.jpg', 'duration_secs': 2515, 'duration': '00:41:55', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS': '2207377', 'BPS-eng': '2207377', 'DURATION': '00:41:54.971000000', 'DURATION-eng': '00:41:54.971000000', 'NUMBER_OF_FRAMES': '60299', 'NUMBER_OF_FRAMES-eng': '60299', 'NUMBER_OF_BYTES': '693936163', 'NUMBER_OF_BYTES-eng': '693936163', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 12:14:56', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 12:14:56', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 0, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS': '360644', 'BPS-eng': '360644', 'DURATION': '00:41:55.221000000', 'DURATION-eng': '00:41:55.221000000', 'NUMBER_OF_FRAMES': '117901', 'NUMBER_OF_FRAMES-eng': '117901', 'NUMBER_OF_BYTES': '113387616', 'NUMBER_OF_BYTES-eng': '113387616', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 12:14:56', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 12:14:56', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 2570}, 'custom_sid': None, 'added': '1728244764', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665143', 
+                'episode_num': 7, 
+                'title': 'EN - BEYOND (2017) - S01E07 - The Hour of the Wolf', 'container_extension': 'mkv', 'info': {'air_date': '2017-02-06', 'rating': 7, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/ibJZcLE4r9kgGiH5QE67lKddHwG.jpg', 'duration_secs': 2571, 'duration': '00:42:51', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS': '1824993', 'BPS-eng': '1824993', 'DURATION': '00:42:50.985000000', 'DURATION-eng': '00:42:50.985000000', 'NUMBER_OF_FRAMES': '61642', 'NUMBER_OF_FRAMES-eng': '61642', 'NUMBER_OF_BYTES': '586503737', 'NUMBER_OF_BYTES-eng': '586503737', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 16:58:51', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 16:58:51', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 0, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS': '382938', 'BPS-eng': '382938', 'DURATION': '00:42:51.200000000', 'DURATION-eng': '00:42:51.200000000', 'NUMBER_OF_FRAMES': '120525', 'NUMBER_OF_FRAMES-eng': '120525', 'NUMBER_OF_BYTES': '123076339', 'NUMBER_OF_BYTES-eng': '123076339', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 16:58:51', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 16:58:51', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 2210}, 'custom_sid': None, 'added': '1728244764', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665144', 
+                'episode_num': 8, 
+                'title': 'EN - BEYOND (2017) - S01E08 - Last Action Hero', 'container_extension': 'mkv', 'info': {'air_date': '2017-02-13', 'rating': 7.5, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/leqDQ6egHobnVseeL3SbnrvscNs.jpg', 'duration_secs': 2512, 'duration': '00:41:52', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS': '1557197', 'BPS-eng': '1557197', 'DURATION': '00:41:51.801000000', 'DURATION-eng': '00:41:51.801000000', 'NUMBER_OF_FRAMES': '60223', 'NUMBER_OF_FRAMES-eng': '60223', 'NUMBER_OF_BYTES': '488921232', 'NUMBER_OF_BYTES-eng': '488921232', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 21:39:41', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 21:39:41', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 0, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS': '344062', 'BPS-eng': '344062', 'DURATION': '00:41:52.064000000', 'DURATION-eng': '00:41:52.064000000', 'NUMBER_OF_FRAMES': '117753', 'NUMBER_OF_FRAMES-eng': '117753', 'NUMBER_OF_BYTES': '108038288', 'NUMBER_OF_BYTES-eng': '108038288', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-29 21:39:41', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-29 21:39:41', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 1904}, 'custom_sid': None, 'added': '1728244765', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665145', 
+                'episode_num': 9, 
+                'title': 'EN - BEYOND (2017) - S01E09 - Out of Darkness', 'container_extension': 'mkv', 'info': {'air_date': '2017-02-20', 'rating': 0, 'id': 67726, 'movie_image': 'https://image.tmdb.org/t/p/w185/7WSLwKgUWu5Bp4XoRAuCldfZX9S.jpg', 'duration_secs': 2572, 'duration': '00:42:52', 'video': {'index': 0, 'codec_name': 'hevc', 'codec_long_name': 'unknown', 'profile': '2', 'codec_type': 'video', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'width': 1920, 'height': 1080, 'coded_width': 1920, 'coded_height': 1080, 'closed_captions': 0, 'film_grain': 0, 'has_b_frames': 2, 'sample_aspect_ratio': '1:1', 'display_aspect_ratio': '16:9', 'pix_fmt': 'yuv420p10le', 'level': 120, 'color_range': 'tv', 'chroma_location': 'left', 'refs': 1, 'r_frame_rate': '24000/1001', 'avg_frame_rate': '24000/1001', 'time_base': '1/1000', 'start_pts': 0, 'start_time': '0.000000', 'extradata_size': 2179, 'disposition': {'default': 1, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'title': 'Encoded by: ImEverlasting', 'BPS': '1598894', 'BPS-eng': '1598894', 'DURATION': '00:42:52.028000000', 'DURATION-eng': '00:42:52.028000000', 'NUMBER_OF_FRAMES': '61667', 'NUMBER_OF_FRAMES-eng': '61667', 'NUMBER_OF_BYTES': '514050281', 'NUMBER_OF_BYTES-eng': '514050281', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-30 02:19:12', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-30 02:19:12', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'audio': {'index': 1, 'codec_name': 'aac', 'codec_long_name': 'unknown', 'profile': '1', 'codec_type': 'audio', 'codec_tag_string': '[0][0][0][0]', 'codec_tag': '0x0000', 'sample_fmt': 'fltp', 'sample_rate': '48000', 'channels': 6, 'channel_layout': '5.1', 'bits_per_sample': 0, 'r_frame_rate': '0/0', 'avg_frame_rate': '0/0', 'time_base': '1/1000', 'start_pts': 20, 'start_time': '0.020000', 'extradata_size': 2, 'disposition': {'default': 0, 'dub': 0, 'original': 0, 'comment': 0, 'lyrics': 0, 'karaoke': 0, 'forced': 0, 'hearing_impaired': 0, 'visual_impaired': 0, 'clean_effects': 0, 'attached_pic': 0, 'timed_thumbnails': 0, 'captions': 0, 'descriptions': 0, 'metadata': 0, 'dependent': 0, 'still_image': 0}, 'tags': {'language': 'eng', 'BPS': '356576', 'BPS-eng': '356576', 'DURATION': '00:42:52.309000000', 'DURATION-eng': '00:42:52.309000000', 'NUMBER_OF_FRAMES': '120577', 'NUMBER_OF_FRAMES-eng': '120577', 'NUMBER_OF_BYTES': '114653129', 'NUMBER_OF_BYTES-eng': '114653129', '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", '_STATISTICS_WRITING_DATE_UTC': '2019-03-30 02:19:12', '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-30 02:19:12', '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'}}, 'bitrate': 1958}, 'custom_sid': None, 'added': '1728244765', 'season': 1, 'direct_source': ''
+            }, 
+            {
+                'id': '1665146', 
+                'episode_num': 10, 
+                'title': 'EN - BEYOND (2017) - S01E10 - Into the Light', 
+                'container_extension': 'mkv', 
+                'info': 
+                {
+                    'air_date': '2017-02-27', 
+                    'rating': 0, 
+                    'id': 67726, 
+                    'movie_image': 'https://image.tmdb.org/t/p/w185/p3bN4QRdxQHWvv8XIAoNvUf7jbw.jpg', 
+                    'duration_secs': 2569, 
+                    'duration': '00:42:49', 
+                    'video': 
+                    {
+                        'index': 0, 
+                        'codec_name': 'hevc', 
+                        'codec_long_name': 'unknown', 
+                        'profile': '2', 
+                        'codec_type': 'video', 
+                        'codec_tag_string': '[0][0][0][0]', 
+                        'codec_tag': '0x0000', 
+                        'width': 1920, 
+                        'height': 1080, 
+                        'coded_width': 1920, 
+                        'coded_height': 1080, 
+                        'closed_captions': 0, 
+                        'film_grain': 0, 
+                        'has_b_frames': 2, 
+                        'sample_aspect_ratio': '1:1', 
+                        'display_aspect_ratio': '16:9', 
+                        'pix_fmt': 'yuv420p10le', 
+                        'level': 120, 
+                        'color_range': 'tv', 
+                        'chroma_location': 
+                        'left', 
+                        'refs': 1, 
+                        'r_frame_rate': '24000/1001', 
+                        'avg_frame_rate': '24000/1001', 
+                        'time_base': '1/1000', 
+                        'start_pts': 0, 
+                        'start_time': '0.000000', 
+                        'extradata_size': 2179, 
+                        'disposition': 
+                        {
+                            'default': 1, 
+                            'dub': 0, 
+                            'original': 0, 
+                            'comment': 0, 
+                            'lyrics': 0, 
+                            'karaoke': 0, 
+                            'forced': 0, 
+                            'hearing_impaired': 0, 
+                            'visual_impaired': 0, 
+                            'clean_effects': 0, 
+                            'attached_pic': 0, 
+                            'timed_thumbnails': 0, 
+                            'captions': 0, 
+                            'descriptions': 0, 
+                            'metadata': 0, 
+                            'dependent': 0, 
+                            'still_image': 0
+                        }, 
+                        'tags': 
+                        {
+                            'title': 
+                            'Encoded by: ImEverlasting', 
+                            'BPS': '1866519', 
+                            'BPS-eng': '1866519', 
+                            'DURATION': '00:42:49.359000000', 
+                            'DURATION-eng': '00:42:49.359000000', 
+                            'NUMBER_OF_FRAMES': '61603', 
+                            'NUMBER_OF_FRAMES-eng': '61603', 
+                            'NUMBER_OF_BYTES': '599469884', 
+                            'NUMBER_OF_BYTES-eng': '599469884', 
+                            '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", 
+                            '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", 
+                            '_STATISTICS_WRITING_DATE_UTC': '2019-03-30 13:06:30', 
+                            '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-30 13:06:30', 
+                            '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', 
+                            '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'
+                        }
+                    }, 
+                    'audio': 
+                    {
+                        'index': 1, 
+                        'codec_name': 'aac', 
+                        'codec_long_name': 'unknown', 
+                        'profile': '1', 
+                        'codec_type': 'audio', 
+                        'codec_tag_string': '[0][0][0][0]', 
+                        'codec_tag': '0x0000', 
+                        'sample_fmt': 'fltp', 
+                        'sample_rate': '48000', 
+                        'channels': 6, 
+                        'channel_layout': '5.1', 
+                        'bits_per_sample': 0, 
+                        'r_frame_rate': '0/0', 
+                        'avg_frame_rate': '0/0', 
+                        'time_base': '1/1000', 
+                        'start_pts': 20, 
+                        'start_time': '0.020000', 
+                        'extradata_size': 2, 
+                        'disposition': 
+                        {
+                            'default': 0, 
+                            'dub': 0, 
+                            'original': 0, 
+                            'comment': 0, 
+                            'lyrics': 0, 
+                            'karaoke': 0, 
+                            'forced': 0, 
+                            'hearing_impaired': 0, 
+                            'visual_impaired': 0, 
+                            'clean_effects': 0, 
+                            'attached_pic': 0, 
+                            'timed_thumbnails': 0, 
+                            'captions': 0, 
+                            'descriptions': 0, 
+                            'metadata': 0, 
+                            'dependent': 0, 
+                            'still_image': 0}, 
+                            'tags': {'language': 'eng', 
+                            'BPS': '403950', 
+                            'BPS-eng': '403950', 
+                            'DURATION': '00:42:49.557000000', 
+                            'DURATION-eng': '00:42:49.557000000', 
+                            'NUMBER_OF_FRAMES': '120448', 
+                            'NUMBER_OF_FRAMES-eng': '120448', 
+                            'NUMBER_OF_BYTES': '129746758', 
+                            'NUMBER_OF_BYTES-eng': '129746758', 
+                            '_STATISTICS_WRITING_APP': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", 
+                            '_STATISTICS_WRITING_APP-eng': "mkvmerge v20.0.0 ('I Am The Sun') 64-bit", 
+                            '_STATISTICS_WRITING_DATE_UTC': '2019-03-30 13:06:30', 
+                            '_STATISTICS_WRITING_DATE_UTC-eng': '2019-03-30 13:06:30', 
+                            '_STATISTICS_TAGS': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES', 
+                            '_STATISTICS_TAGS-eng': 'BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES'
+                        }
+                    }, 
+                    'bitrate': 2273
+                }, 
+                'custom_sid': None, 
+                'added': '1728244765', 
+                'season': 1, 
+                'direct_source': ''
+            }
+        ]
+    }
+}

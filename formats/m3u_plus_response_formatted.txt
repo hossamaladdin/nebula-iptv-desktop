@@ -1,0 +1,150 @@
+#EXTM3U
+
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Dansbandskanalen" tvg-logo="" group-title="",SWE| [Radio][SE] Dansbandskanalen
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302330
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Dixie Radio FM" tvg-logo="" group-title="",SWE| [Radio][SE] Dixie Radio FM
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302328
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Fun Radio" tvg-logo="" group-title="",SWE| [Radio][SE] Fun Radio
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302326
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Guldkanalen" tvg-logo="" group-title="",SWE| [Radio][SE] Guldkanalen
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302325
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Guldkanalen 60-tal" tvg-logo="" group-title="",SWE| [Radio][SE] Guldkanalen 60-tal
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302324
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Guldkanalen 70-tal" tvg-logo="" group-title="",SWE| [Radio][SE] Guldkanalen 70-tal
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302323
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Guldkanalen 80-tal" tvg-logo="" group-title="",SWE| [Radio][SE] Guldkanalen 80-tal
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302322
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Guldkanalen 90-tal" tvg-logo="" group-title="",SWE| [Radio][SE] Guldkanalen 90-tal
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302321
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Hit FM Gold" tvg-logo="" group-title="",SWE| [Radio][SE] Hit FM Gold
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302320
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] HitCity" tvg-logo="" group-title="",SWE| [Radio][SE] HitCity
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302319
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Lite FM" tvg-logo="" group-title="",SWE| [Radio][SE] Lite FM
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302318
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Lugna Favoriter" tvg-logo="" group-title="",SWE| [Radio][SE] Lugna Favoriter
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302317
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] NRJ" tvg-logo="" group-title="",SWE| [Radio][SE] NRJ
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302315
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] P1" tvg-logo="" group-title="",SWE| [Radio][SE] P1
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302314
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] P2" tvg-logo="" group-title="",SWE| [Radio][SE] P2
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302313
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] P3" tvg-logo="" group-title="",SWE| [Radio][SE] P3
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302312
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] P4" tvg-logo="" group-title="",SWE| [Radio][SE] P4
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302311
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Power Hit Radio" tvg-logo="" group-title="",SWE| [Radio][SE] Power Hit Radio
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302310
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Power Street" tvg-logo="" group-title="",SWE| [Radio][SE] Power Street
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302309
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Radio Wix" tvg-logo="" group-title="",SWE| [Radio][SE] Radio Wix
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302306
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] RaggarRadio (OFFLINE)" tvg-logo="" group-title="",SWE| [Radio][SE] RaggarRadio (OFFLINE)
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302305
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] Retro FM Nordväst" tvg-logo="" group-title="",SWE| [Radio][SE] Retro FM Nordväst
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302304
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] RIX FM" tvg-logo="" group-title="",SWE| [Radio][SE] RIX FM
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302303
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] RIX FM Festival" tvg-logo="" group-title="",SWE| [Radio][SE] RIX FM Festival
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302302
+#EXTINF:-1 tvg-id="" tvg-name="SWE| [Radio][SE] RIX FM Fresh" tvg-logo="" group-title="",SWE| [Radio][SE] RIX FM Fresh
+http://line.rs6ott.com:80/c0f0824a07/efcccdc986/302301
+
+
+
+***Movies***
+
+
+
+#EXTINF:-1 tvg-id="" tvg-name="SE - Black Box Diaries" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/c91I9Iwxc3tJxuPJlw5HEuBtjDS.jpg" group-title="|SE| FILM 2019 - 2025",SE - Black Box Diaries
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1752457.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - Michelle Buteau: A Buteau-ful Mind At Radio City Music Hall" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/nwaJMFfAXUlouzfigpNFCOObsCK.jpg" group-title="|SE| FILM 2019 - 2025",SE - Michelle Buteau: A Buteau-ful Mind At Radio City Music Hall
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1752456.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - Avicii I'm Tim" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/f9knSE6KdDmEYBi6Da1XxBKA4Hs.jpg" group-title="|SE| FILM 2019 - 2025",SE - Avicii I'm Tim
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1752455.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE-4K - The Forever Purge" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/lB068qa6bQ0QKYKyC2xnYGvYjl7.jpg" group-title="|SE| FILM 4K",SE-4K - The Forever Purge
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1751401.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE-4K - Black Mass" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/nSbpuyd2UySuW7kaoXzYUfes1Bl.jpg" group-title="|SE| FILM 4K",SE-4K - Black Mass
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1751400.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE-4K - Lone Survivor" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/zaBIrloyhGK7iNTZMb3f9SARsl8.jpg" group-title="|SE| FILM 4K",SE-4K - Lone Survivor
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1751399.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - Goebbels And The Führer" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/iK5rrNUSNUMOWyPUQAHo6WsjOho.jpg" group-title="|SE| FILM 2019 - 2025",SE - Goebbels And The Führer
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1751398.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - Werewolves" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/elKf8Y5yi6Rl6teKsrQg0GAwaQD.jpg" group-title="|SE| FILM 2019 - 2025",SE - Werewolves
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1751397.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - Your Fault (Culpa Tuya)" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/1sQA7lfcF9yUyoLYC0e6Zo3jmxE.jpg" group-title="|SE| FILM 2019 - 2025",SE - Your Fault (Culpa Tuya)
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1751396.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - Blood Father" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/1VpEcYxo2T5qt5YMynfWZkctPR4.jpg" group-title="|SE| FILM 1900 - 2018",SE - Blood Father
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1751395.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - A Dark Truth" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/je93UwdBdhtHpp9YgaYGnJqnX8G.jpg" group-title="|SE| FILM 1900 - 2018",SE - A Dark Truth
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1751394.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE-4K - Big Hero 6 (Svenskt Tal)" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/2mxS4wUimwlLmI1xp6QW6NSU361.jpg" group-title="|SE| FILM 4K",SE-4K - Big Hero 6 (Svenskt Tal)
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1750366.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE-4K - Big Hero 6 (Svensk Text)" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/2mxS4wUimwlLmI1xp6QW6NSU361.jpg" group-title="|SE| FILM 4K",SE-4K - Big Hero 6 (Svensk Text)
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1750365.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - Ronny Chieng: Love To Hate It" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/pGoB87zqMKedBsdaAHYzMq2cE7u.jpg" group-title="|SE| FILM 2019 - 2025",SE - Ronny Chieng: Love To Hate It
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1750074.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - KIX" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/rd2LT0oiro4INiYKEUWOZN3IkTG.jpg" group-title="|SE| FILM 2019 - 2025",SE - KIX
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1750073.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE-4K - Heat" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/umSVjVdbVwtx5ryCA2QXL44Durm.jpg" group-title="|SE| FILM 4K",SE-4K - Heat
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1741380.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE-4K - The Untouchables" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/iK4twY48a1nVCez0qXE5w4JFvXw.jpg" group-title="|SE| FILM 4K",SE-4K - The Untouchables
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1741377.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - The Mountain Between Us" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/3XNfYTW4XGscI81nXMSWGsQ8cpu.jpg" group-title="|SE| FILM 1900 - 2018",SE - The Mountain Between Us
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1741375.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - The Lord Of The Rings: The War Of The Rohirrim" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/23WCoDo6wzBfzbX7BGTNwVUqZfi.jpg" group-title="|SE| FILM 2019 - 2025",SE - The Lord Of The Rings: The War Of The Rohirrim
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1741367.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE-4K - The Guardians Of The Galaxy Holiday Special" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/8dqXyslZ2hv49Oiob9UjlGSHSTR.jpg" group-title="|SE| FILM 4K",SE-4K - The Guardians Of The Galaxy Holiday Special
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1741306.mp4
+#EXTINF:-1 tvg-id="" tvg-name="SE - The Guardians Of The Galaxy Holiday Special" tvg-logo="https://image.tmdb.org/t/p/w600_and_h900_bestv2/8dqXyslZ2hv49Oiob9UjlGSHSTR.jpg" group-title="|SE| FILM 2019 - 2025",SE - The Guardians Of The Galaxy Holiday Special
+http://line.rs6ott.com:80/movie/c0f0824a07/efcccdc986/1741288.mp4
+
+
+***Series***
+
+
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Action S01 E01" tvg-logo="https://image.tmdb.org/t/p/w185/geAQPCgrXmq2SCu04rN0AnLMBTt.jpg" group-title="|SE| SWEDISH SERIES",[SE] Action S01 E01
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1752445.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Action S01 E02" tvg-logo="https://image.tmdb.org/t/p/w185/9x2BBy2T0RKcNi3hYT2SEoutrHO.jpg" group-title="|SE| SWEDISH SERIES",[SE] Action S01 E02
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1752446.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Action S01 E03" tvg-logo="https://image.tmdb.org/t/p/w185/js5OPPGF3ooPNpKmaoSkGWp3LHu.jpg" group-title="|SE| SWEDISH SERIES",[SE] Action S01 E03
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1752447.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Action S01 E04" tvg-logo="https://image.tmdb.org/t/p/w185/cWA9mM72bjXVNRh1ZO1qdZ0oCL3.jpg" group-title="|SE| SWEDISH SERIES",[SE] Action S01 E04
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1752448.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Action S01 E05" tvg-logo="https://image.tmdb.org/t/p/w185/fgWa2eR2A2U0XCCFLKcieFky55E.jpg" group-title="|SE| SWEDISH SERIES",[SE] Action S01 E05
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1752449.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Action S01 E06" tvg-logo="https://image.tmdb.org/t/p/w185/eEutM4YnjAjHNX7LZtbGJbOctCA.jpg" group-title="|SE| SWEDISH SERIES",[SE] Action S01 E06
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1752450.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S01 E01" tvg-logo="https://image.tmdb.org/t/p/w185/jRtJEj7ExEmHJn799YHhUE7s7e6.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S01 E01
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751355.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S01 E02" tvg-logo="https://image.tmdb.org/t/p/w185/hxZtzlL2CpuXPvUsu445YBGr4GE.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S01 E02
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751356.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S01 E03" tvg-logo="https://image.tmdb.org/t/p/w185/uXORo4zh01LGPSm727FVGlkDGZJ.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S01 E03
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751357.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S01 E04" tvg-logo="https://image.tmdb.org/t/p/w185/5vyxFokRul4HdaD7DP3sVv640cB.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S01 E04
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751358.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S01 E05" tvg-logo="https://image.tmdb.org/t/p/w185/dFoZmYLJIKm5qHbJ4wo41Bnb8CO.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S01 E05
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751359.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S01 E06" tvg-logo="https://image.tmdb.org/t/p/w185/jtD8rH9MAAtia7J09e4o2jaBH0Y.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S01 E06
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751360.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S01 E07" tvg-logo="https://image.tmdb.org/t/p/w185/361q9kSZYkoFt82dhQj1Dvsufip.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S01 E07
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751361.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S01 E08" tvg-logo="https://image.tmdb.org/t/p/w185/cmHCIY0i1ZmR0UymWdm5ezWAbSc.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S01 E08
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751362.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S02 E01" tvg-logo="https://image.tmdb.org/t/p/w185/uM3nTxmkHSuow2uvGPKb7ySSDlU.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S02 E01
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751365.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S02 E02" tvg-logo="https://image.tmdb.org/t/p/w185/kPqb4nHateQhuwVSdpWBww7Nrr2.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S02 E02
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751366.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S02 E03" tvg-logo="https://image.tmdb.org/t/p/w185/fTlVyaufxwb2j7IkdonnoGrvyJ3.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S02 E03
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751367.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S02 E04" tvg-logo="https://image.tmdb.org/t/p/w185/iz3QziY28oTdUwLcF9W171jug6j.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S02 E04
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751368.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S02 E05" tvg-logo="https://image.tmdb.org/t/p/w185/ftSS79wz8AzLOsg5QLjEStokhLj.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S02 E05
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751369.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S02 E06" tvg-logo="https://image.tmdb.org/t/p/w185/hfiuMRfb2AY6wJ6WmsJffynWpXB.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S02 E06
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751370.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S02 E07" tvg-logo="https://image.tmdb.org/t/p/w185/d6BXDLm6gOTtnxFUDZLsIPqFwgX.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S02 E07
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751371.mp4
+#EXTINF:-1 tvg-id="" tvg-name="[SE] Strandhotellet S02 E08" tvg-logo="https://image.tmdb.org/t/p/w185/pErEGercqPRJMkGFtyD8vZEro6n.jpg" group-title="|SE| SWEDISH SERIES",[SE] Strandhotellet S02 E08
+http://line.rs6ott.com:80/series/c0f0824a07/efcccdc986/1751372.mp4

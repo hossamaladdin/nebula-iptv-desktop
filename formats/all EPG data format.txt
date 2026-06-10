@@ -1,0 +1,14 @@
+*<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<tv generator-info-name="HIGHEND" generator-info-url="line.rs6ott.com">
+    <channel id="NBA.pt"><display-name>PT| SPORT TV NBA HD</display-name><icon src="http://103.176.90.118/piconsnew/sporttvnba.png" /></channel>
+    <channel id="SicK.pt"><display-name>PT| SIC K</display-name><icon src="http://103.176.90.118/piconsnew/sick.png" /></channel><channel>
+    <programme start="20250101210000 +0100" stop="20250101230000 +0100" channel="NBA.pt" >
+        <title>2023-24 NBA Marquee Matchup</title>
+        <desc>Reveja os jogos mais emocionantes da NBA!</desc>
+    </programme>
+    <programme start="20250101230000 +0100" stop="20250102010000 +0100" channel="NBA.pt" >
+        <title>2023-24 NBA Marquee Matchup</title>
+        <desc>Reveja os jogos mais emocionantes da NBA!</desc>
+    </programme>
+</tv>

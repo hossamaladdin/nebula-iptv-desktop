@@ -1,0 +1,8 @@
+requests==2.31.0
+lxml==4.9.2
+python-dateutil==2.8.2
+PyQt5==5.15.9
+# Optional — only needed when "Use embedded player" is enabled in Settings. The
+# app launches and works without it; it only fails when the user actually toggles
+# the embedded player on without having it (or libvlc) installed.
+python-vlc>=3.0.20000
