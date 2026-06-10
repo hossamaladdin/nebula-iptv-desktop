@@ -11,11 +11,11 @@ layout still works for users who want the legacy look.
 
 import sys
 
-from PyQt5.QtCore import Qt, QSize, QEvent, QPropertyAnimation, QEasingCurve, pyqtSignal
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtCore import Qt, QSize, QEvent, QPropertyAnimation, QEasingCurve, pyqtSignal, QTimer
+from PyQt5.QtGui import QPalette, QColor, QCursor
 from PyQt5.QtWidgets import (
     QWidget, QFrame, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel,
-    QPushButton, QGraphicsOpacityEffect,
+    QPushButton, QGraphicsOpacityEffect, QSlider, QApplication,
 )
 
 
@@ -34,6 +34,48 @@ QPushButton#hamburgerButton {
 }
 QPushButton#hamburgerButton:hover { background: rgba(91, 141, 239, 220); }
 """
+
+
+_CONTROLS_STYLE = """
+QWidget#tvControls {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 rgba(0,0,0,60), stop:1 rgba(0,0,0,210));
+}
+QPushButton#tvCtrlBtn {
+    background: rgba(45, 45, 48, 130);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 16px;
+    min-width: 34px;
+}
+QPushButton#tvCtrlBtn:hover { background: rgba(91, 141, 239, 220); }
+QPushButton#tvCtrlBtn:disabled { color: #888; background: rgba(45,45,48,60); }
+QLabel#tvTimeLabel { color: #eee; font-size: 11px; padding: 0 8px; }
+QSlider#tvSeek::groove:horizontal { height: 6px; background: rgba(255,255,255,70); border-radius: 3px; }
+QSlider#tvSeek::handle:horizontal { background: #7c3aed; width: 14px; margin: -4px 0; border-radius: 7px; }
+QSlider#tvSeek::handle:horizontal:hover { background: #9b6dff; }
+QSlider#tvSeek::sub-page:horizontal { background: #7c3aed; border-radius: 3px; }
+QSlider#tvVol::groove:horizontal  { height: 4px; background: rgba(255,255,255,60); border-radius: 2px; }
+QSlider#tvVol::handle:horizontal  { background: #7c3aed; width: 12px; margin: -4px 0; border-radius: 6px; }
+QSlider#tvVol::sub-page:horizontal { background: #7c3aed; border-radius: 2px; }
+"""
+
+
+class _ClickableSlider(QSlider):
+    """Click-to-position behaviour for the seek bar (same trick as V2)."""
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton and self.maximum() != self.minimum():
+            ratio = max(0.0, min(1.0, event.x() / max(1, self.width())))
+            val = self.minimum() + ratio * (self.maximum() - self.minimum())
+            self.setValue(int(val))
+            self.sliderPressed.emit()
+            self.sliderReleased.emit()
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
 
 class _EdgeTrigger(QWidget):
@@ -208,6 +250,109 @@ class TVRoot(QWidget):
         self.edge_trigger.entered.connect(self.open_menu)
         self.edge_trigger.raise_()
 
+        # ---------- Phase 3: bottom controls overlay ----------
+        self.controls = QWidget(self)
+        self.controls.setObjectName("tvControls")
+        self.controls.setStyleSheet(_CONTROLS_STYLE)
+        self.controls.setAttribute(Qt.WA_StyledBackground, True)
+
+        self.btn_prev   = QPushButton("⏮")
+        self.btn_rewind = QPushButton("⏪")
+        self.btn_play   = QPushButton("⏯")
+        self.btn_ffwd   = QPushButton("⏩")
+        self.btn_next   = QPushButton("⏭")
+        self.btn_mute   = QPushButton("\U0001f50a")
+        self.btn_fs     = QPushButton("⛶")
+        self.vol_slider = QSlider(Qt.Horizontal)
+        self.vol_slider.setObjectName("tvVol")
+        self.vol_slider.setRange(0, 100)
+        self.vol_slider.setValue(80)
+        self.vol_slider.setFixedWidth(120)
+        self.player.audio_set_volume(80)
+
+        self.seek_slider = _ClickableSlider(Qt.Horizontal)
+        self.seek_slider.setObjectName("tvSeek")
+        self.seek_slider.setRange(0, 1000)
+        self._seeking = False
+
+        self.time_label = QLabel("00:00 / 00:00")
+        self.time_label.setObjectName("tvTimeLabel")
+
+        for b in (self.btn_prev, self.btn_rewind, self.btn_play, self.btn_ffwd,
+                  self.btn_next, self.btn_mute, self.btn_fs):
+            b.setObjectName("tvCtrlBtn")
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFocusPolicy(Qt.NoFocus)
+            b.setFixedHeight(34)
+        self.vol_slider.setCursor(Qt.PointingHandCursor)
+        self.seek_slider.setCursor(Qt.PointingHandCursor)
+
+        self.btn_play.clicked.connect(self.toggle_play_pause)
+        self.btn_rewind.clicked.connect(lambda: self.seek_by(-10000))
+        self.btn_ffwd.clicked.connect(lambda: self.seek_by(10000))
+        self.btn_mute.clicked.connect(self.toggle_mute)
+        self.btn_fs.clicked.connect(self.toggle_fullscreen)
+        self.vol_slider.valueChanged.connect(self.set_volume)
+        self.seek_slider.sliderPressed.connect(lambda: setattr(self, "_seeking", True))
+        self.seek_slider.sliderReleased.connect(self._seek_released)
+
+        # ⏮ / ⏭ are wired by the host app (it knows the playlist) — exposed
+        # as signals so the host can connect to its own next/prev.
+        self.next_requested = pyqtSignal  # placeholder; real signal below
+        # Re-define via a tiny inner emitter so pyqtSignal lives on a QObject:
+        class _ButtonSignals(QWidget):
+            next_requested = pyqtSignal()
+            prev_requested = pyqtSignal()
+        self._signals = _ButtonSignals(self)
+        self.btn_next.clicked.connect(self._signals.next_requested.emit)
+        self.btn_prev.clicked.connect(self._signals.prev_requested.emit)
+        # Disabled until host sets the playlist.
+        self.btn_next.setEnabled(False)
+        self.btn_prev.setEnabled(False)
+
+        seek_row = QHBoxLayout()
+        seek_row.setContentsMargins(12, 4, 12, 0)
+        seek_row.addWidget(self.seek_slider, 1)
+        seek_row.addWidget(self.time_label)
+
+        btn_row = QHBoxLayout()
+        btn_row.setContentsMargins(12, 0, 12, 8)
+        btn_row.setSpacing(4)
+        btn_row.addWidget(self.btn_prev)
+        btn_row.addWidget(self.btn_rewind)
+        btn_row.addWidget(self.btn_play)
+        btn_row.addWidget(self.btn_ffwd)
+        btn_row.addWidget(self.btn_next)
+        btn_row.addStretch(1)
+        btn_row.addWidget(self.btn_mute)
+        btn_row.addWidget(self.vol_slider)
+        btn_row.addWidget(self.btn_fs)
+
+        controls_lay = QVBoxLayout(self.controls)
+        controls_lay.setContentsMargins(0, 0, 0, 0)
+        controls_lay.setSpacing(2)
+        controls_lay.addLayout(seek_row)
+        controls_lay.addLayout(btn_row)
+
+        # ---------- Auto-hide ----------
+        self._hide_timer = QTimer(self)
+        self._hide_timer.setSingleShot(True)
+        self._hide_timer.timeout.connect(self._hide_chrome)
+
+        self._poll_timer = QTimer(self)
+        self._poll_timer.setInterval(500)
+        self._poll_timer.timeout.connect(self._poll_state)
+        self._poll_timer.start()
+
+        self.video_frame.installEventFilter(self)
+        self.setMouseTracking(True)
+        try:
+            QApplication.instance().installEventFilter(self)
+        except Exception:
+            pass
+
+        self._wake_chrome()
+
     # ------------------------------------------------------------------ libvlc
     @staticmethod
     def is_available():
@@ -268,6 +413,133 @@ class TVRoot(QWidget):
         widget.raise_()
         self._overlay_widgets.append(widget)
 
+    # ------------------------------------------------------------- transport
+    def toggle_play_pause(self):
+        if self.player.is_playing():
+            self.player.pause()
+            self.btn_play.setText("▶")
+        else:
+            self.player.play()
+            self.btn_play.setText("⏯")
+        self._wake_chrome()
+
+    def seek_by(self, ms):
+        cur = self.player.get_time()
+        if cur < 0:
+            return
+        self.player.set_time(int(max(0, cur + ms)))
+        self._wake_chrome()
+
+    def set_volume(self, value):
+        v = int(value)
+        self.player.audio_set_volume(v)
+        self.btn_mute.setText("\U0001f508" if v == 0 else "\U0001f50a")
+        self._wake_chrome()
+
+    def toggle_mute(self):
+        self.player.audio_toggle_mute()
+        muted = self.player.audio_get_mute() == 1
+        self.btn_mute.setText("\U0001f507" if muted else "\U0001f50a")
+        self._wake_chrome()
+
+    def toggle_fullscreen(self):
+        top = self.window()
+        if top.isFullScreen():
+            top.showNormal()
+        else:
+            top.showFullScreen()
+        self._wake_chrome()
+
+    def _seek_released(self):
+        try:
+            length = self.player.get_length()
+            if length > 0:
+                self.player.set_time(int(self.seek_slider.value() / 1000 * length))
+        finally:
+            self._seeking = False
+            self._wake_chrome()
+
+    # --------------------------------------------------------- next/prev hooks
+    def connect_next_prev(self, on_next, on_prev):
+        """Host app supplies callbacks that walk the visible playlist."""
+        self._signals.next_requested.connect(on_next)
+        self._signals.prev_requested.connect(on_prev)
+        self.btn_next.setEnabled(True)
+        self.btn_prev.setEnabled(True)
+
+    # ------------------------------------------------------------- chrome
+    def _wake_chrome(self):
+        self.controls.show()
+        self.hamburger.show()
+        self.video_frame.unsetCursor()
+        if self.player.is_playing():
+            self._hide_timer.start(3000)
+        else:
+            self._hide_timer.stop()
+
+    def _hide_chrome(self):
+        if self.menu.is_open():
+            return
+        if not self.player.is_playing():
+            return
+        self.controls.hide()
+        self.hamburger.hide()
+        self.video_frame.setCursor(Qt.BlankCursor)
+
+    def _poll_state(self):
+        try:
+            length = self.player.get_length()
+            cur    = self.player.get_time()
+            if length > 0 and not self._seeking:
+                self.seek_slider.setEnabled(True)
+                self.seek_slider.setValue(int(cur / length * 1000))
+                self.time_label.setText(f"{self._fmt_ms(cur)} / {self._fmt_ms(length)}")
+            else:
+                self.seek_slider.setEnabled(False)
+                self.seek_slider.setValue(0)
+                self.time_label.setText("LIVE")
+        except Exception:
+            pass
+
+    @staticmethod
+    def _fmt_ms(ms):
+        if ms is None or ms < 0:
+            return "00:00"
+        s = int(ms // 1000)
+        h, s = divmod(s, 3600)
+        m, s = divmod(s, 60)
+        return f"{h:d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
+
+    def _is_in_self(self, obj):
+        w = obj
+        while w is not None:
+            if w is self:
+                return True
+            try:
+                w = w.parent()
+            except Exception:
+                return False
+        return False
+
+    def eventFilter(self, obj, event):
+        if not self._is_in_self(obj):
+            return False
+        et = event.type()
+        if et in (QEvent.MouseMove, QEvent.MouseButtonPress, QEvent.KeyPress, QEvent.Wheel):
+            self._wake_chrome()
+        if et == QEvent.Wheel:
+            try:
+                delta = event.angleDelta().y()
+            except Exception:
+                delta = 0
+            if delta:
+                self.vol_slider.setValue(max(0, min(100, self.vol_slider.value() + (5 if delta > 0 else -5))))
+            return True
+        if et == QEvent.MouseButtonDblClick:
+            self.toggle_fullscreen()
+            return True
+        return False
+
     # --------------------------------------------------------------- menu API
     def set_menu_content(self, widget):
         """Host the V2 tab widget inside the sliding menu."""
@@ -295,9 +567,6 @@ class TVRoot(QWidget):
             self._placeholder.setGeometry(0, 0, self.video_frame.width(), self.video_frame.height())
 
         # Phase 2 chrome positions:
-        # * Hamburger top-left with a small margin.
-        # * Edge trigger covers the left edge below the hamburger.
-        # * Menu spans full height. If it's open it sits at x=0; otherwise off-screen left.
         self.hamburger.move(10, 10)
         self.hamburger.raise_()
         self.edge_trigger.setGeometry(0, self.hamburger.height() + 14,
@@ -308,6 +577,11 @@ class TVRoot(QWidget):
         else:
             self.menu.move(-self.menu.width(), 0)
             self.menu.resize(self.menu.width(), self.height())
+
+        # Phase 3 controls: bottom 110 px, full width.
+        ch = 110
+        self.controls.setGeometry(0, self.height() - ch, self.width(), ch)
+        self.controls.raise_()
 
         # Phase 3 overlays will use this hook to position themselves at the
         # top / bottom / left edges.

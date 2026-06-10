@@ -2786,7 +2786,26 @@ class IPTVPlayerApp(QMainWindow):
             return None
         self._tv_root = TVRoot(self, user_agent=self.current_user_agent)
         self._main_stack.addWidget(self._tv_root)  # page 1
+        # Hook the in-window next/prev buttons to the same playlist walk used
+        # by the floating embedded player.
+        self._tv_root.connect_next_prev(self._tv_play_next, self._tv_play_prev)
         return self._tv_root
+
+    def _tv_play_next(self):
+        if not hasattr(self, "_tv_playlist") or not self._tv_playlist:
+            return
+        if self._tv_idx + 1 >= len(self._tv_playlist):
+            return
+        self._tv_idx += 1
+        self._tv_root.play_url(self._tv_playlist[self._tv_idx]['url'])
+
+    def _tv_play_prev(self):
+        if not hasattr(self, "_tv_playlist") or not self._tv_playlist:
+            return
+        if self._tv_idx <= 0:
+            return
+        self._tv_idx -= 1
+        self._tv_root.play_url(self._tv_playlist[self._tv_idx]['url'])
 
     def _enter_tv_view(self):
         # Re-parent the V2 tab widget into the sliding menu — the user still
@@ -2825,6 +2844,10 @@ class IPTVPlayerApp(QMainWindow):
                     # libvlc unavailable — fall through to the V2 floating-window path.
                     pass
             if self._main_stack.currentIndex() == 1 and self._tv_root is not None:
+                # Capture the visible playlist so the in-window ⏮ / ⏭ walk it.
+                playlist, current_idx, _title = self._collect_visible_playlist(url)
+                self._tv_playlist = playlist
+                self._tv_idx = current_idx
                 self._tv_root.play_url(url)
                 self.animate_progress(0, 100, "Playing in TV view")
                 return
