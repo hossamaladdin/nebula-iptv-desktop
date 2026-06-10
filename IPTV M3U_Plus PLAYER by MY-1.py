@@ -28,10 +28,11 @@ from PyQt5.QtWidgets import (
 
 from AccountManager import AccountManager
 from CustomPyQtWidgets import LiveInfoBox, MovieInfoBox, SeriesInfoBox, EmbeddedPlayerWindow
+from tv_root import TVRoot
 import Threadpools
 from Threadpools import FetchDataWorker, SearchWorker, OnlineWorker, EPGWorker, MovieInfoFetcher, SeriesInfoFetcher, ImageFetcher
 
-CURRENT_VERSION = "V2.00.00"
+CURRENT_VERSION = "V3.00.00-alpha1"
 
 is_windows  = sys.platform.startswith('win')
 is_mac      = sys.platform.startswith('darwin')
@@ -356,16 +357,34 @@ class IPTVPlayerApp(QMainWindow):
         #Add iptv info text to info tab
         self.info_tab_layout.addWidget(self.iptv_info_text)
 
-        #Create main widget
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        main_layout = QVBoxLayout(main_widget)
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(10)
+        # V3 central layout: a QStackedWidget with two pages.
+        # Page 0 = classic V2 tabs view (preserved unchanged).
+        # Page 1 = TVRoot, the libvlc-backed full-window video surface.
+        # Ctrl+T (or the future TV button) toggles between them. The internal
+        # player automatically switches to page 1 when it starts a stream.
+        from PyQt5.QtWidgets import QStackedWidget, QShortcut
+        from PyQt5.QtGui import QKeySequence
 
-        #Add everything to the main_layout
-        main_layout.addWidget(self.tab_widget)
-        main_layout.addWidget(self.progress_bar)
+        classic_view = QWidget()
+        classic_layout = QVBoxLayout(classic_view)
+        classic_layout.setContentsMargins(10, 10, 10, 10)
+        classic_layout.setSpacing(10)
+        classic_layout.addWidget(self.tab_widget)
+        classic_layout.addWidget(self.progress_bar)
+
+        # TVRoot is created lazily because libvlc.Instance() can be slow and
+        # we don't want to pay that cost when the user is on a libvlc-less box.
+        # `_ensure_tv_root` builds it on first use and adds it to the stack.
+        self._tv_root = None
+
+        self._main_stack = QStackedWidget()
+        self._main_stack.addWidget(classic_view)   # page 0 — classic
+        self.setCentralWidget(self._main_stack)
+
+        # Hotkey: Ctrl+T flips views. Lets the user verify TV mode works
+        # without launching the internal player.
+        self._tv_toggle_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
+        self._tv_toggle_shortcut.activated.connect(self._toggle_tv_view)
 
     def updateUserDataFile(self):
         # Load the configuration file. A corrupted .ini must not crash the app —
@@ -920,6 +939,14 @@ class IPTVPlayerApp(QMainWindow):
         self.theme_select_box.setToolTip("Switch between Light, Dark, or follow the OS setting (default).")
         self.theme_select_box.currentTextChanged.connect(self.themeChanged)
 
+        self.tv_mode_checkbox = QCheckBox("TV mode — play video as the main window background (Ctrl+T)")
+        self.tv_mode_checkbox.setToolTip(
+            "V3 experimental: when on, the Internal Player plays the stream INSIDE\n"
+            "the main window instead of a floating window. Press Ctrl+T to flip\n"
+            "between the classic tab view and the TV view."
+        )
+        self.tv_mode_checkbox.stateChanged.connect(self.toggleTvMode)
+
         #Set timeout integer validator
         timeout_validator = QIntValidator(0, 999)
 
@@ -952,6 +979,7 @@ class IPTVPlayerApp(QMainWindow):
         self.settings_layout.addWidget(self.stream_status_checkbox,                         9, 0)
         self.settings_layout.addWidget(QLabel("Theme: "),                                  11, 0)
         self.settings_layout.addWidget(self.theme_select_box,                              11, 1)
+        self.settings_layout.addWidget(self.tv_mode_checkbox,                              12, 0, 1, 2)
 
         #Advanced options
         self.settings_layout.addWidget(QLabel("Select User-Agent (Advanced option): "),         5, 0)
@@ -1237,6 +1265,9 @@ class IPTVPlayerApp(QMainWindow):
         #Apply persisted theme (Light / Dark / System) — default System
         self.loadDefaultTheme()
 
+        #Load V3 TV-mode preference (default: off)
+        self.loadDefaultTvMode()
+
         #Load startup credentials
         self.loadStartupCredentials()
 
@@ -1378,6 +1409,35 @@ class IPTVPlayerApp(QMainWindow):
         self.theme_select_box.setCurrentText(mode)
         self.theme_select_box.blockSignals(False)
         self._apply_theme(mode)
+
+    def toggleTvMode(self, state):
+        checked = bool(state)
+        self._tv_mode_default = checked
+        config = configparser.ConfigParser()
+        try:
+            config.read(self.user_data_file)
+        except (configparser.Error, UnicodeDecodeError):
+            config = configparser.ConfigParser()
+        config['TVMode'] = {'enabled': str(checked)}
+        try:
+            with open(self.user_data_file, 'w') as config_file:
+                config.write(config_file)
+        except OSError as e:
+            print(f"Could not write user data file: {e}")
+
+    def loadDefaultTvMode(self):
+        config = configparser.ConfigParser()
+        try:
+            config.read(self.user_data_file)
+        except (configparser.Error, UnicodeDecodeError):
+            config = configparser.ConfigParser()
+        if config.has_option('TVMode', 'enabled'):
+            self._tv_mode_default = (config['TVMode']['enabled'] == 'True')
+        else:
+            self._tv_mode_default = False
+        self.tv_mode_checkbox.blockSignals(True)
+        self.tv_mode_checkbox.setCheckState(Qt.Checked if self._tv_mode_default else Qt.Unchecked)
+        self.tv_mode_checkbox.blockSignals(False)
 
     def toggleStreamStatus(self, state):
         checked = bool(state)
@@ -2704,7 +2764,43 @@ class IPTVPlayerApp(QMainWindow):
         else:
             self.current_player_label.setText("No player selected — choose one above.")
 
+    def _ensure_tv_root(self):
+        """Build TVRoot on first use and add it to the central stack."""
+        if self._tv_root is not None:
+            return self._tv_root
+        if not TVRoot.is_available():
+            QMessageBox.warning(
+                self, "TV mode unavailable",
+                "TV mode needs libvlc installed on this machine.\n"
+                "Install VLC from https://www.videolan.org/vlc/ and try again."
+            )
+            return None
+        self._tv_root = TVRoot(self, user_agent=self.current_user_agent)
+        self._main_stack.addWidget(self._tv_root)  # page 1
+        return self._tv_root
+
+    def _toggle_tv_view(self):
+        """Ctrl+T or the TV button: flip between classic tabs and TV view."""
+        if self._main_stack.currentIndex() == 0:
+            tv = self._ensure_tv_root()
+            if tv is None:
+                return
+            self._main_stack.setCurrentIndex(1)
+        else:
+            self._main_stack.setCurrentIndex(0)
+
     def _play_embedded(self, url):
+        # V3 TV mode: if the user has TV view turned on, play into the in-window
+        # video frame and flip the stack to it. The classic V2 floating window
+        # is still used when TV mode is off (so this is a strict additive change).
+        if getattr(self, '_tv_mode_default', False):
+            tv = self._ensure_tv_root()
+            if tv is not None:
+                tv.play_url(url)
+                self._main_stack.setCurrentIndex(1)
+                self.animate_progress(0, 100, "Playing in TV view")
+                return
+
         # Lazily create the embedded VLC window — keeping a single instance lets
         # the user switch channels without rebuilding the libvlc context each time.
         if not hasattr(self, "_embedded_player_window") or self._embedded_player_window is None:
