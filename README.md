@@ -1,180 +1,88 @@
-![GitHub all releases](https://img.shields.io/github/downloads/Youri666/Xtream-m3u_plus-IPTV-Player/total?color=blue&label=Total%20Downloads&logo=github)
-![GitHub release (latest by date)](https://img.shields.io/github/downloads/Youri666/Xtream-m3u_plus-IPTV-Player/V1.03.02/total?color=purple&label=Latest%20Release%20Downloads&logo=github)
-![GitHub License](https://img.shields.io/github/license/Youri666/Xtream-m3u_plus-IPTV-Player?label=License&logo=github)
-![GitHub stars](https://img.shields.io/github/stars/Youri666/Xtream-m3u_plus-IPTV-Player)
+# Nebula IPTV Desktop
 
-# FREE OPENSOURCE M3U/XTREME IPTV PLAYER
+PyQt5 IPTV player with a **libvlc** decode backend and an opt-in **TV-mode UX** — the video fills the window as the background, and the channel browser slides in as a translucent overlay.
 
-This IPTV player, built with Python and PyQt5, supports M3U_plus playlists and Xtream Codes API, allowing users to manage and play IPTV channels, movies, and series.
+Forked from [V2 of Xtream-m3u_plus-IPTV-Player](https://github.com/Youri666/Xtream-m3u_plus-IPTV-Player). Private working repo for the V3 redesign. See [`PLAN.md`](PLAN.md) for the architectural plan.
 
-## What's new in V2
+## Status
 
-| | |
+| Phase | Status |
 |---|---|
-| **Internal player** | Built-in libvlc-backed player window with seek bar, prev/next that walk the visible playlist, sidebar with live filter, subtitle picker, fullscreen, auto-hide controls, mouse-wheel volume, middle-click pause, double-click fullscreen, and persisted volume |
-| **Theme** | Light / Dark / **System** (auto-detects Windows AppsUseLightTheme) |
-| **Internationalization** | Application font set to Segoe UI / Noto Sans / Helvetica Neue so Arabic, CJK, Hebrew etc. render with real glyphs (no more `?` boxes). EPG decoder also tries CP1256 (Arabic ANSI) when UTF-8 fails, so MENA-region providers display correctly |
-| **Stability** | Startup-crash hardening — every `configparser` read is wrapped against `Error` / `UnicodeDecodeError`, every section/key access uses `has_option()`. File-based logging to `log.txt` captures every print, traceback and unhandled exception |
-| **Bug fixes** | #92, #74, #47, #18, #17, #2 / #13 — see the [V2 PR](https://github.com/hossamaladdin/Xtream-m3u_plus-IPTV-Player/tree/v2-fixes-and-internal-player) for the full list |
+| 1. TV root + in-window video background | shipped |
+| 2. Sliding translucent menu (hamburger + edge trigger + slide animation) | shipped |
+| 3. In-window player controls overlay (seek, transport, volume, fullscreen) | shipped |
+| 4. Polish — auto-close menu after channel pick | shipped |
 
-### Internal player
+Everything that was in V2 (internal player, bug fixes, theme switcher, Arabic / CP1256 EPG fallback, file logging) is still there. V3 mode is opt-in via Settings → "TV mode".
 
-![Internal player playing a LIVE channel](Screenshots/V2/internal-player-live.png)
-
-Auto-hides 3 s after the last input, wakes on any mouse move / key. Translucent overlay so the video shows through. Cursor hides with the controls (only over the video, never over the bar). Keyboard: `Space` play/pause, `F` fullscreen, `S` cycle subs, `M` mute, `[ / ]` prev / next, `← / →` ±10 s, `↑ / ↓` volume, `L` toggle sidebar, `Esc` exit fullscreen.
-
-
-
-> Feel free to report issues when encountering any problems: [Issues](https://github.com/Youri666/Xtream-m3u_plus-IPTV-Player/issues)
-
-> For sharing ideas and general questions: [Discussions](https://github.com/Youri666/Xtream-m3u_plus-IPTV-Player/discussions)
-
-# Download
-Download the latest version here: [Latest releases](https://github.com/Youri666/Xtream-m3u_plus-IPTV-Player/releases)
-
-# Features
-- **Supports Windows, Linux and Mac OS**
-- **M3U_plus Support:** Load and play live TV, movies, and series.
-- **Xtream Codes API:** Log in with Xtream credentials and dynamically load content.
-- **Categorized Playlists:** Organized into Live TV, Movies, and Series tabs for easy navigation.
-- **Favorites:** Add items to favorite and find them in the 'Favorites' category.
-- **EPG Option:** Access and download Electronic Program Guide for live TV channels.
-- **Movies and series information:** Additional movies and series information e.g. movie/series cover, description, cast, trailer, TMDB, etc.
-- **Series navigation:** Access series categories and specific episodes with efficient 'Go Back' functionality in series playlist.
-- **Search bar history:** By using the up and down keys you can access the previously searched texts in the search bars.
-- **Sorting playlists:** Each list can be sorted A-Z, Z-A or sorting can be disabled. The default sorting can be configured in the settings tab.
-- **Info tab:** Information about IPTV account status.
-- **Adjustable column widths**: Adjust the column widths in each tab to your liking by dragging the edges.
-- **Error Handling:** Graceful handling of loading issues.
-- **External Player Support:** Play channels/movies/series using VLC or SMPlayer.
-- **Recommended Player:** For optimal performance, use VLC media player. Download it at: https://www.videolan.org/vlc/
-- **Recommended Player:** For optimal performance, use SMPlayer. Download it at: https://www.smplayer.info
-
-# Future plans
-- **M3U file support**: Select M3U file or URL to M3U file to load data from.
-- **Home tab:** Home tab with previously watched and popular movies and series.
-- **TMDB support:** Much more information about movies and series with the TMDB API.
-- **Improve startup loading time:** Improve loading time at startup by optionally loading the IPTV data from cache.
-- **Dark theme**
-
-<details>
-<summary><h1><strong>FAQ</strong></h1></summary>
-
-<details>
-<summary><strong>My Live TV doesn't work, but my movies and series do work. How can I fix this?</strong></summary>
-
-Some IPTV providers require a different URL format than the default, therefore you need to change this URL format. Go to the account manager inside the IPTV player. And in the live tv format line replace the URL format with one of the following URL formats:
-
-```{server}/{username}/{password}/{stream_id}```
-
-```{server}/{username}/{password}/{stream_id}.ts```
-
-```{server}/{username}/{password}/{stream_id}.m3u8```
-
-```{server}/{username}/{password}/live/{stream_id}```
-
-```{server}/{username}/{password}/live/{stream_id}.ts```
-
-```{server}/{username}/{password}/live/{stream_id}.m3u8```
-
-```{server}/live/{username}/{password}/{stream_id}```
-
-```{server}/live/{username}/{password}/{stream_id}.ts```
-
-```{server}/live/{username}/{password}/{stream_id}.m3u8```
-
-If none of these work, more attention is needed and you should create an [Issues](https://github.com/Youri666/Xtream-m3u_plus-IPTV-Player/issues).
-
-</details>
-
-</details>
-
-<details>
-<summary><h1><strong>Screenshots</strong></h1></summary>
-  
-**Live TV showing EPG data**
-![Image](https://github.com/user-attachments/assets/c82f0759-29d8-4b3e-a462-59581523e1d8)
-
-**Movies with information**
-![Image](https://github.com/user-attachments/assets/5a2113ef-b871-47d1-9082-85955893ff50)
-
-**Series navigation**
-![Image](https://github.com/user-attachments/assets/24c8cc12-8d3b-41c0-a2aa-035d11d6ff8d)
-![Image](https://github.com/user-attachments/assets/86ddb458-9008-4875-a072-007e63028cbe)
-![Image](https://github.com/user-attachments/assets/9831f4b9-5c83-44ea-9ea4-43d39d15da85)
-
-**Search in categories and entries**
-![Image](https://github.com/user-attachments/assets/faa2e022-28f8-4d28-9b39-20da5ada040c)
-![Image](https://github.com/user-attachments/assets/df39bd8f-06e5-48aa-8318-dd491c52d4c1)
-
-**Save your IPTV account and optionally auto-select at startup**
-![Image](https://github.com/user-attachments/assets/678582bc-8af9-499b-b601-38b7786b57bf)
-
-</details>
-
-<details>
-<summary><h1><strong>How To compile the source code</strong></h1></summary>
-  
-## Windows Project Setup Instructions
-
-### 1. Install latest Python 3
-- Run the [latest Python 3 installer](https://www.python.org/downloads/).
-- During installation, make sure to:
-  - **Use administrator privileges** when installing Python
-  - **Add `python.exe` to the system PATH**
-  - Select any other appropriate options as prompted
-
-### 2. Open a Windows Command Prompt and install all dependencies
+## Running
 
 ```bash
-python -m pip install --upgrade pip
-python -m pip install --upgrade setuptools
-python -m pip install --upgrade pyinstaller
-python -m pip install --upgrade requests lxml python-dateutil PyQt5
+pip install -r requirements.txt   # PyQt5, requests, lxml, python-dateutil, python-vlc (optional)
+python "IPTV M3U_Plus PLAYER by MY-1.py"
 ```
 
-### 3. Verify that PyInstaller is installed correctly
+TV mode requires **libvlc** to be installed (the system VLC media player ships it). Without libvlc, classic V2 mode is used.
 
-```bash
-pyinstaller --version
-# Example of expected output: 6.14.0
+## Layout
+
+### Classic mode (V2, still the default)
+
+```
++----+------------+---------------+
+|tabs|  channels  |  info pane    |   <- QTabWidget covering the whole window
++----+------------+---------------+
+| progress bar                    |
++---------------------------------+
 ```
 
-### 4. Final Setup
-- Run the [build_iptv_player.bat](build_iptv_player.bat) file to start the process.
+### TV mode (V3)
 
-## Rocky9/RHEL9 Project Setup Instructions
-
-### 1. Install latest Python 3
-- To compile Python yourself, download the [source code](https://www.python.org/downloads/source/)
-- Tested with Python 3.13.4\
- _Note:_  The following dependencies must be installed:\
-`dnf install python3-dev python-dev`\
-If you are building Python by yourself, rebuild with `--enable-shared` (or, `--enable-framework` on macOS).\
-
-### 2. Open a Terminal and install all dependencies
-
-```bash
-python3 -m pip install --upgrade pip
-python3 -m pip install --upgrade setuptools
-python3 -m pip install --upgrade pyinstaller
-python3 -m pip install --upgrade requests lxml python-dateutil PyQt5
 ```
-_Note:_ If you are not logged in as root (which is recommended), you need to ensure that `pyInstaller` is included in your PATH environment variable:
-```bash
-export PATH=$PATH:$HOME/.local/bin
-```
++---------------------------------------------+
+|  [ menu ]                              -[]X |
+|                                             |
+|                                             |
+|              [   video fills the   ]        |
+|              [   whole window      ]        |
+|                                             |
+|                                             |
+|    <<  <<  pp  >>  >>          vol===   fs  |   <- auto-hide overlay
++---------------------------------------------+
 
-### 3. Verify that PyInstaller is installed correctly
+Click the menu button (or hover the left edge) -> menu slides in:
 
-```bash
-pyinstaller --version
-# Example of expected output: 6.14.0
++----------+----------------------------------+
+|  LIVE    |                                  |
+|  Movies  |                                  |
+|  Series  |   video still plays behind       |
+|  Info    |   translucent menu               |
+|  Settings|                                  |
++----------+----------------------------------+
 ```
 
-### 4. Final Setup
-- Make the SH script executable with the command:\
-`chmod +x build_iptv_player.sh`
-- Run the [./build_iptv_player.sh](build_iptv_player.sh) file to start the process.
+## Keyboard shortcuts (TV view)
 
-</details>
+| Key | Action |
+|---|---|
+| `Ctrl+T` | Flip between Classic / TV view |
+| `M`      | Toggle the sliding menu |
+| `Space`  | Play / pause |
+| `Left` / `Right` | Seek +/- 10 s |
+| `Up` / `Down`    | Volume |
+| Mouse wheel | Volume |
+| Middle-click | Pause / resume |
+| Double-click | Fullscreen toggle |
+| `Esc`    | Exit fullscreen |
+
+## What's planned next
+
+- Slide-from-right Settings overlay (so settings doesn't live inside the menu)
+- Picture-in-picture mode
+- EPG overlay on top of the video (no need to switch views)
+- Channel preview thumbnails in the sliding menu
+- A non-frameless variant of TV mode for users who want native window decorations
+
+## License
+
+Inherited from the upstream project — GPL-3.0. See `LICENSE`.

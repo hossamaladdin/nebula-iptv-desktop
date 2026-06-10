@@ -2849,6 +2849,12 @@ class IPTVPlayerApp(QMainWindow):
                 self._tv_playlist = playlist
                 self._tv_idx = current_idx
                 self._tv_root.play_url(url)
+                # Slide the menu away so the user actually sees the channel
+                # they just clicked. Defer slightly so the click animation
+                # completes before the slide starts.
+                from PyQt5.QtCore import QTimer
+                if self._tv_root.menu.is_open():
+                    QTimer.singleShot(250, self._tv_root.close_menu)
                 self.animate_progress(0, 100, "Playing in TV view")
                 return
 
