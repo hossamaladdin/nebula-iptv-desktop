@@ -263,20 +263,25 @@ class AccountDialog(QtWidgets.QDialog):
         self.parent = parent
         self.mode = mode
         self.account = account
-        self.setWindowTitle("Edit Credentials" if self.mode == self.MODE_EDIT else "Add Credentials")
+        self.setWindowTitle("Edit Link" if self.mode == self.MODE_EDIT else "Add Link")
         self.setupUi()
 
     def setupUi(self):
         layout = QVBoxLayout(self)
 
-        self.manual_entry_name    = "Manual/Xtream entry"
-        self.m3u_plus_entry_name  = "M3U_plus URL entry"
+        self.manual_entry_name    = "Xtream username + password"
+        self.m3u_plus_entry_name  = "M3U-plus URL"
+        self.m3u_file_entry_name  = "M3U file on disk"
         self.default_url_formats  = self.parent.parent.default_url_formats
 
         # Connection method
         self.method_selector = QtWidgets.QComboBox()
-        self.method_selector.addItems([self.manual_entry_name, self.m3u_plus_entry_name])
-        layout.addWidget(QtWidgets.QLabel("Select Method:"))
+        self.method_selector.addItems([
+            self.manual_entry_name,
+            self.m3u_plus_entry_name,
+            self.m3u_file_entry_name,
+        ])
+        layout.addWidget(QtWidgets.QLabel("Connection type:"))
         layout.addWidget(self.method_selector)
 
         # Stack of forms
@@ -301,15 +306,34 @@ class AccountDialog(QtWidgets.QDialog):
         manual_layout.addRow("Server URL:", self.server_entry)
         manual_layout.addRow("Username:", self.username_entry)
         manual_layout.addRow("Password:", self.password_entry)
-        manual_layout.addRow("Live URL Format:", self.live_url_format_entry)
-        manual_layout.addRow("Movie URL Format:", self.movie_url_format_entry)
-        manual_layout.addRow("Series URL Format:", self.series_url_format_entry)
+
+        # URL format rows are advanced — most users never touch them. Wrap
+        # them in a "▼ Advanced" toggle so the dialog isn't cluttered with
+        # `{server}/{username}/...` template strings on first open.
+        self.manual_adv_button = QPushButton("▶  Advanced (URL format templates)")
+        self.manual_adv_button.setFlat(True)
+        self.manual_adv_button.setCursor(Qt.PointingHandCursor)
+        self.manual_adv_button.setStyleSheet("text-align: left; padding: 4px;")
+        self.manual_adv_box = QtWidgets.QWidget()
+        manual_adv_layout = QFormLayout(self.manual_adv_box)
+        manual_adv_layout.setContentsMargins(0, 0, 0, 0)
+        manual_adv_layout.addRow("Live URL format:", self.live_url_format_entry)
+        manual_adv_layout.addRow("Movie URL format:", self.movie_url_format_entry)
+        manual_adv_layout.addRow("Series URL format:", self.series_url_format_entry)
+        self.manual_adv_box.hide()
+        manual_layout.addRow(self.manual_adv_button)
+        manual_layout.addRow(self.manual_adv_box)
+        def _toggle_manual_adv():
+            shown = not self.manual_adv_box.isVisible()
+            self.manual_adv_box.setVisible(shown)
+            self.manual_adv_button.setText(("▼" if shown else "▶") + "  Advanced (URL format templates)")
+        self.manual_adv_button.clicked.connect(_toggle_manual_adv)
 
         #Set placeholder texts for xtream credentials
-        self.name_entry_manual.setPlaceholderText("Custom account name")
-        self.server_entry.setPlaceholderText("e.g. http://xtreamcode.ex/")
-        self.username_entry.setPlaceholderText("e.g. abcde12345")
-        self.password_entry.setPlaceholderText("e.g. fghij67890")
+        self.name_entry_manual.setPlaceholderText("e.g. Home / Family / Provider X")
+        self.server_entry.setPlaceholderText("e.g. http://your-provider.tv:8080/")
+        self.username_entry.setPlaceholderText("Your IPTV username")
+        self.password_entry.setPlaceholderText("Your IPTV password")
 
         # M3U form
         self.m3u_form = QtWidgets.QWidget()
@@ -323,17 +347,68 @@ class AccountDialog(QtWidgets.QDialog):
         self.m3u_series_url_format_entry = QLineEdit(self.default_url_formats['series'])
 
         m3u_layout.addRow("Name:", self.name_entry_m3u)
-        m3u_layout.addRow("m3u_plus URL:", self.m3u_url_entry)
-        m3u_layout.addRow("Live URL Format:", self.m3u_live_url_format_entry)
-        m3u_layout.addRow("Movie URL Format:", self.m3u_movie_url_format_entry)
-        m3u_layout.addRow("Series URL Format:", self.m3u_series_url_format_entry)
+        m3u_layout.addRow("M3U-plus URL:", self.m3u_url_entry)
+
+        self.m3u_adv_button = QPushButton("▶  Advanced (URL format templates)")
+        self.m3u_adv_button.setFlat(True)
+        self.m3u_adv_button.setCursor(Qt.PointingHandCursor)
+        self.m3u_adv_button.setStyleSheet("text-align: left; padding: 4px;")
+        self.m3u_adv_box = QtWidgets.QWidget()
+        m3u_adv_layout = QFormLayout(self.m3u_adv_box)
+        m3u_adv_layout.setContentsMargins(0, 0, 0, 0)
+        m3u_adv_layout.addRow("Live URL format:", self.m3u_live_url_format_entry)
+        m3u_adv_layout.addRow("Movie URL format:", self.m3u_movie_url_format_entry)
+        m3u_adv_layout.addRow("Series URL format:", self.m3u_series_url_format_entry)
+        self.m3u_adv_box.hide()
+        m3u_layout.addRow(self.m3u_adv_button)
+        m3u_layout.addRow(self.m3u_adv_box)
+        def _toggle_m3u_adv():
+            shown = not self.m3u_adv_box.isVisible()
+            self.m3u_adv_box.setVisible(shown)
+            self.m3u_adv_button.setText(("▼" if shown else "▶") + "  Advanced (URL format templates)")
+        self.m3u_adv_button.clicked.connect(_toggle_m3u_adv)
 
         #Set placeholder texts for m3u credentials
-        self.name_entry_m3u.setPlaceholderText("Custom account name")
-        self.m3u_url_entry.setPlaceholderText("e.g. http://xtreamcode.ex/get.php?username=Mike&password=1234&type=m3u_plus&output=ts")
+        self.name_entry_m3u.setPlaceholderText("e.g. Home / Family / Provider X")
+        self.m3u_url_entry.setPlaceholderText("e.g. http://your-provider.tv/get.php?username=...&password=...&type=m3u_plus")
+
+        # M3U file form (third option)
+        self.m3u_file_form = QtWidgets.QWidget()
+        m3u_file_layout = QFormLayout(self.m3u_file_form)
+        self.name_entry_m3u_file = QLineEdit()
+        self.name_entry_m3u_file.setPlaceholderText("e.g. My local playlist")
+        self.m3u_file_path_entry = QLineEdit()
+        self.m3u_file_path_entry.setPlaceholderText("Click 'Browse…' to pick a .m3u / .m3u8 file")
+        self.m3u_file_path_entry.setReadOnly(True)
+        m3u_file_browse = QPushButton("Browse…")
+        m3u_file_browse.setCursor(Qt.PointingHandCursor)
+        def _pick_m3u_file():
+            from PyQt5.QtWidgets import QFileDialog
+            p, _ = QFileDialog.getOpenFileName(
+                self, "Choose M3U file", "",
+                "M3U playlists (*.m3u *.m3u8);;All files (*)"
+            )
+            if p:
+                self.m3u_file_path_entry.setText(p)
+        m3u_file_browse.clicked.connect(_pick_m3u_file)
+        path_row = QtWidgets.QWidget()
+        path_row_lay = QHBoxLayout(path_row)
+        path_row_lay.setContentsMargins(0, 0, 0, 0)
+        path_row_lay.addWidget(self.m3u_file_path_entry)
+        path_row_lay.addWidget(m3u_file_browse)
+        m3u_file_layout.addRow("Name:", self.name_entry_m3u_file)
+        m3u_file_layout.addRow("M3U file:", path_row)
+        hint = QLabel(
+            "Nebula will read the file and look for an Xtream get.php URL "
+            "inside it. Plain channel-only M3U files are not yet supported."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: rgba(150,150,150,200); font-size: 11px;")
+        m3u_file_layout.addRow(hint)
 
         self.stack.addWidget(self.manual_form)
         self.stack.addWidget(self.m3u_form)
+        self.stack.addWidget(self.m3u_file_form)
 
         self.method_selector.currentIndexChanged.connect(self.stack.setCurrentIndex)
 
@@ -389,20 +464,46 @@ class AccountDialog(QtWidgets.QDialog):
             server      = self.server_entry.text().strip()
             username    = self.username_entry.text().strip()
             password    = self.password_entry.text().strip()
-
             if not name or not server or not username or not password:
-                QtWidgets.QMessageBox.warning(self, "Input Error", "Please fill all fields for Manual Entry.")
+                QtWidgets.QMessageBox.warning(self, "Missing fields",
+                    "Please fill in name, server URL, username and password.")
                 return
-
             self.accept()
-        else:
+        elif method == self.m3u_plus_entry_name:
             name    = self.name_entry_m3u.text().strip()
             m3u_url = self.m3u_url_entry.text().strip()
-
             if not name or not m3u_url:
-                QtWidgets.QMessageBox.warning(self, "Input Error", "Please fill all fields for m3u_plus URL Entry.")
+                QtWidgets.QMessageBox.warning(self, "Missing fields",
+                    "Please give the link a name and paste its M3U-plus URL.")
                 return
-
+            self.accept()
+        else:  # m3u_file
+            name = self.name_entry_m3u_file.text().strip()
+            path_ = self.m3u_file_path_entry.text().strip()
+            if not name or not path_:
+                QtWidgets.QMessageBox.warning(self, "Missing fields",
+                    "Please give the link a name and pick an .m3u file.")
+                return
+            # Extract the Xtream get.php URL from the file. We accept the
+            # first http(s) line that contains get.php — that's how V2's
+            # parser identifies the M3U-plus shape.
+            try:
+                with open(path_, 'r', encoding='utf-8', errors='replace') as f:
+                    content = f.read()
+            except OSError as e:
+                QtWidgets.QMessageBox.warning(self, "Could not read file", str(e))
+                return
+            import re as _re
+            m = _re.search(r"https?://[^\s\"']*get\.php\?[^\s\"']*", content)
+            if not m:
+                QtWidgets.QMessageBox.warning(self, "Unsupported M3U file",
+                    "This file doesn't contain an Xtream `get.php` URL. "
+                    "Plain channel-only M3U files aren't supported yet.")
+                return
+            # Stash the resolved URL on the dialog so get_credentials can
+            # return it as a regular m3u_plus entry — re-using the existing
+            # save/login machinery.
+            self._resolved_m3u_url = m.group(0)
             self.accept()
 
     def get_credentials(self):
@@ -416,13 +517,18 @@ class AccountDialog(QtWidgets.QDialog):
             live_url_format   = self.live_url_format_entry.text().strip()
             movie_url_format  = self.movie_url_format_entry.text().strip()
             series_url_format = self.series_url_format_entry.text().strip()
-
             return ('manual', name, server, username, password, live_url_format, movie_url_format, series_url_format)
-        else:
+        elif method == self.m3u_plus_entry_name:
             name              = self.name_entry_m3u.text().strip()
             m3u_url           = self.m3u_url_entry.text().strip()
             live_url_format   = self.m3u_live_url_format_entry.text().strip()
             movie_url_format  = self.m3u_movie_url_format_entry.text().strip()
             series_url_format = self.m3u_series_url_format_entry.text().strip()
-
             return ('m3u_plus', name, m3u_url, live_url_format, movie_url_format, series_url_format)
+        else:  # m3u_file — resolved into m3u_plus at validate-time
+            name = self.name_entry_m3u_file.text().strip()
+            m3u_url = getattr(self, '_resolved_m3u_url', '')
+            return ('m3u_plus', name, m3u_url,
+                    self.default_url_formats['live'],
+                    self.default_url_formats['movie'],
+                    self.default_url_formats['series'])

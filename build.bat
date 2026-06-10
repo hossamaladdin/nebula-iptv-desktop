@@ -25,7 +25,7 @@ echo PyInstaller version:
 pause
 
 REM Main Python script to package
-SET MAIN_SCRIPT="IPTV M3U_Plus PLAYER by MY-1.py"
+SET MAIN_SCRIPT="nebula_iptv.py"
 
 REM Set build and dist folders separately
 SET BUILD_PATH=build
@@ -62,7 +62,7 @@ REM Run PyInstaller directly with all necessary options and added data files
   --noconsole ^
   --noconfirm ^
   --icon "Images/TV_icon.ico" ^
-  --name "IPTV_Player" ^
+  --name "NebulaIPTV" ^
   --workpath %BUILD_PATH% ^
   --distpath %DIST_PATH% ^
   --add-data "Images/TV_icon.ico;Images" ^
@@ -89,9 +89,11 @@ REM Run PyInstaller directly with all necessary options and added data files
   --add-data "Images/online_status.png;Images" ^
   --add-data "Images/maybe_status.png;Images" ^
   --add-data "Images/offline_status.png;Images" ^
-  --add-data "Threadpools.py;." ^
-  --add-data "CustomPyQtWidgets.py;." ^
-  --add-data "AccountManager.py;." ^
+  --add-data "workers.py;." ^
+  --add-data "info_boxes.py;." ^
+  --add-data "accounts.py;." ^
+  --add-data "tv_root.py;." ^
+  --add-data "tv_screens.py;." ^
   %MAIN_SCRIPT%
 
 IF "%exec_choice%"=="1" GOTO end
@@ -102,7 +104,7 @@ REM Create executable with debug console
   --onefile ^
   --noconfirm ^
   --icon "Images/TV_icon.ico" ^
-  --name "IPTV_Player_with_debug_console" ^
+  --name "NebulaIPTV_debug" ^
   --workpath %BUILD_PATH% ^
   --distpath %DIST_PATH% ^
   --add-data "Images/TV_icon.ico;Images" ^
@@ -129,9 +131,11 @@ REM Create executable with debug console
   --add-data "Images/online_status.png;Images" ^
   --add-data "Images/maybe_status.png;Images" ^
   --add-data "Images/offline_status.png;Images" ^
-  --add-data "Threadpools.py;." ^
-  --add-data "CustomPyQtWidgets.py;." ^
-  --add-data "AccountManager.py;." ^
+  --add-data "workers.py;." ^
+  --add-data "info_boxes.py;." ^
+  --add-data "accounts.py;." ^
+  --add-data "tv_root.py;." ^
+  --add-data "tv_screens.py;." ^
   %MAIN_SCRIPT%
 
 :end

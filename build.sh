@@ -10,7 +10,7 @@ fi
 
 # Set variables
 PYINSTALLER=pyinstaller
-MAIN_SCRIPT="IPTV M3U_Plus PLAYER by MY-1.py"
+MAIN_SCRIPT="nebula_iptv.py"
 BUILD_PATH="build"
 DIST_PATH="dist"
 
@@ -32,7 +32,7 @@ $PYINSTALLER \
   --noconsole \
   --noconfirm \
   --icon "Images/TV_icon.ico" \
-  --name "IPTV_Player" \
+  --name "NebulaIPTV" \
   --distpath "$DIST_PATH" \
   --workpath "$BUILD_PATH" \
   --add-data "Images/TV_icon.ico:Images" \
@@ -59,9 +59,11 @@ $PYINSTALLER \
   --add-data "Images/online_status.png:Images" \
   --add-data "Images/maybe_status.png:Images" \
   --add-data "Images/offline_status.png:Images" \
-  --add-data "Threadpools.py:." \
-  --add-data "CustomPyQtWidgets.py:." \
-  --add-data "AccountManager.py:." \
+  --add-data "workers.py:." \
+  --add-data "info_boxes.py:." \
+  --add-data "accounts.py:." \
+  --add-data "tv_root.py:." \
+  --add-data "tv_screens.py:." \
   "$MAIN_SCRIPT"
 
 echo

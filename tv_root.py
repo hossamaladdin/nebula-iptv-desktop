@@ -15,7 +15,8 @@ from PyQt5.QtCore import Qt, QSize, QEvent, QPropertyAnimation, QEasingCurve, py
 from PyQt5.QtGui import QPalette, QColor, QCursor
 from PyQt5.QtWidgets import (
     QWidget, QFrame, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel,
-    QPushButton, QGraphicsOpacityEffect, QSlider, QApplication,
+    QPushButton, QGraphicsOpacityEffect, QSlider, QApplication, QMenu, QAction,
+    QFileDialog, QMessageBox, QScrollArea,
 )
 
 
@@ -33,6 +34,117 @@ QPushButton#hamburgerButton {
     padding: 4px 10px;
 }
 QPushButton#hamburgerButton:hover { background: rgba(91, 141, 239, 220); }
+"""
+
+
+class _SubHideStrip(QWidget):
+    """Draggable opaque black rectangle the user can park over hardcoded /
+    burned-in subtitles. Bottom-right resize handle (drag) and a small ✕
+    in the top-right to hide.
+
+    Mouse interactions:
+    * Drag anywhere on the strip → move
+    * Drag the bottom-right 14×14 square → resize
+    * Click ✕ → hide
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("background: black;")
+        self.setCursor(Qt.SizeAllCursor)
+        self.resize(640, 60)
+        self._drag_offset = None
+        self._resizing = False
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.close_btn = QPushButton("✕", self)
+        self.close_btn.setStyleSheet(
+            "QPushButton { color: white; background: rgba(255,255,255,40); "
+            "border: none; border-radius: 8px; font-size: 11px; }"
+            "QPushButton:hover { background: rgba(255,80,80,200); }"
+        )
+        self.close_btn.setFixedSize(16, 16)
+        self.close_btn.setCursor(Qt.PointingHandCursor)
+        self.close_btn.setFocusPolicy(Qt.NoFocus)
+        self.close_btn.clicked.connect(self.hide)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.close_btn.move(self.width() - 20, 4)
+
+    def _is_in_resize_corner(self, pos):
+        return pos.x() >= self.width() - 14 and pos.y() >= self.height() - 14
+
+    def mousePressEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+        if self._is_in_resize_corner(event.pos()):
+            self._resizing = True
+            self._drag_offset = event.pos()
+        else:
+            self._resizing = False
+            self._drag_offset = event.pos()
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._drag_offset is None:
+            return
+        if self._resizing:
+            new_w = max(120, event.pos().x())
+            new_h = max(24,  event.pos().y())
+            # Stay inside the parent's bounds.
+            if self.parentWidget() is not None:
+                new_w = min(new_w, self.parentWidget().width() - self.x())
+                new_h = min(new_h, self.parentWidget().height() - self.y())
+            self.resize(new_w, new_h)
+        else:
+            new_pos = self.mapToParent(event.pos() - self._drag_offset)
+            if self.parentWidget() is not None:
+                new_pos.setX(max(0, min(new_pos.x(), self.parentWidget().width() - self.width())))
+                new_pos.setY(max(0, min(new_pos.y(), self.parentWidget().height() - self.height())))
+            self.move(new_pos)
+        event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self._drag_offset = None
+        self._resizing = False
+        event.accept()
+
+
+_PLAYLIST_PANEL_STYLE = """
+QWidget#playlistPanel {
+    background: rgba(15, 16, 22, 200);
+    border-left: 1px solid rgba(255,255,255,40);
+}
+QLabel#playlistHeader {
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 12px;
+    background: rgba(0,0,0,80);
+}
+QPushButton#playlistRow {
+    text-align: left;
+    color: rgba(255,255,255,230);
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+QPushButton#playlistRow:hover {
+    background: rgba(91,141,239,60);
+    border-left: 3px solid rgba(91,141,239,140);
+}
+QPushButton#playlistRowCurrent {
+    text-align: left;
+    color: white;
+    background: rgba(91,141,239,90);
+    border: none;
+    border-left: 3px solid #7c3aed;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
 """
 
 
@@ -233,10 +345,17 @@ class TVRoot(QWidget):
         self._on_overlay_event = on_overlay_event
         self._overlay_widgets = []  # filled by add_overlay()
 
+        # Whether TVRoot draws its own hamburger / sliding menu / edge trigger.
+        # In V3 (progressive-screens mode) the menu and back nav are owned by
+        # the screen stack at the app level, so we suppress these to avoid the
+        # hamburger button overlapping the PlayerScreen's Back button.
+        self._show_internal_chrome = True
+
         # Phase 2 chrome: hamburger toggle, edge trigger, sliding menu.
         self.hamburger = QPushButton("☰", self)
         self.hamburger.setObjectName("hamburgerButton")
         self.hamburger.setStyleSheet(_SLIDING_MENU_STYLE)
+        self.hamburger.setAttribute(Qt.WA_TranslucentBackground, True)
         self.hamburger.setCursor(Qt.PointingHandCursor)
         self.hamburger.setFixedSize(40, 36)
         self.hamburger.setToolTip("Open / close the channels panel (M)")
@@ -256,11 +375,52 @@ class TVRoot(QWidget):
         self.controls.setStyleSheet(_CONTROLS_STYLE)
         self.controls.setAttribute(Qt.WA_StyledBackground, True)
 
+        # --- Right-edge playlist panel (replaces the popup menu) ---
+        self.playlist_panel = QWidget(self)
+        self.playlist_panel.setObjectName("playlistPanel")
+        self.playlist_panel.setStyleSheet(_PLAYLIST_PANEL_STYLE)
+        self.playlist_panel.setAttribute(Qt.WA_StyledBackground, True)
+        self.playlist_panel.setFixedWidth(320)
+        pl_layout = QVBoxLayout(self.playlist_panel)
+        pl_layout.setContentsMargins(0, 0, 0, 0)
+        pl_layout.setSpacing(0)
+        pl_header = QLabel("Playlist")
+        pl_header.setObjectName("playlistHeader")
+        pl_layout.addWidget(pl_header)
+        self._playlist_scroll = QScrollArea(self.playlist_panel)
+        self._playlist_scroll.setWidgetResizable(True)
+        self._playlist_scroll.setFrameShape(QFrame.NoFrame)
+        self._playlist_scroll.setStyleSheet("background: transparent;")
+        self._playlist_inner = QWidget()
+        self._playlist_inner_layout = QVBoxLayout(self._playlist_inner)
+        self._playlist_inner_layout.setContentsMargins(0, 4, 0, 4)
+        self._playlist_inner_layout.setSpacing(0)
+        self._playlist_inner_layout.addStretch(1)
+        self._playlist_scroll.setWidget(self._playlist_inner)
+        pl_layout.addWidget(self._playlist_scroll, 1)
+        self.playlist_panel.hide()
+        self._playlist_anim = QPropertyAnimation(self.playlist_panel, b"pos")
+        self._playlist_anim.setDuration(200)
+        self._playlist_anim.setEasingCurve(QEasingCurve.OutCubic)
+
+        # Subtitle hide strip — child of TVRoot so it sits above the video.
+        self._sub_hide_strip = _SubHideStrip(self)
+        self._sub_hide_strip.hide()
+
         self.btn_prev   = QPushButton("⏮")
         self.btn_rewind = QPushButton("⏪")
         self.btn_play   = QPushButton("⏯")
         self.btn_ffwd   = QPushButton("⏩")
         self.btn_next   = QPushButton("⏭")
+        self.btn_slow   = QPushButton("\U0001f422")    # 🐢
+        self.btn_fast   = QPushButton("\U0001f407")    # 🐇
+        self.rate_label = QLabel("1.00x")
+        self.rate_label.setStyleSheet("color: white; padding: 0 8px; background: transparent;")
+        self.btn_subs   = QPushButton("CC")
+        self.btn_copy   = QPushButton("\U0001f517")    # 🔗 copy URL
+        self.btn_playlist = QPushButton("\U0001f4cb") # 📋 show playlist
+        self.btn_ar     = QPushButton("AR")            # aspect ratio
+        self.btn_pin    = QPushButton("\U0001f4cc")    # 📌 always-on-top
         self.btn_mute   = QPushButton("\U0001f50a")
         self.btn_fs     = QPushButton("⛶")
         self.vol_slider = QSlider(Qt.Horizontal)
@@ -269,6 +429,8 @@ class TVRoot(QWidget):
         self.vol_slider.setValue(80)
         self.vol_slider.setFixedWidth(120)
         self.player.audio_set_volume(80)
+
+        self._current_url = ""
 
         self.seek_slider = _ClickableSlider(Qt.Horizontal)
         self.seek_slider.setObjectName("tvSeek")
@@ -279,17 +441,35 @@ class TVRoot(QWidget):
         self.time_label.setObjectName("tvTimeLabel")
 
         for b in (self.btn_prev, self.btn_rewind, self.btn_play, self.btn_ffwd,
-                  self.btn_next, self.btn_mute, self.btn_fs):
+                  self.btn_next, self.btn_slow, self.btn_fast,
+                  self.btn_subs, self.btn_copy, self.btn_playlist, self.btn_ar,
+                  self.btn_pin, self.btn_mute, self.btn_fs):
             b.setObjectName("tvCtrlBtn")
             b.setCursor(Qt.PointingHandCursor)
             b.setFocusPolicy(Qt.NoFocus)
             b.setFixedHeight(34)
         self.vol_slider.setCursor(Qt.PointingHandCursor)
         self.seek_slider.setCursor(Qt.PointingHandCursor)
+        self.btn_subs.setEnabled(False)
+        self.btn_copy.setToolTip("Copy stream URL to clipboard")
+        self.btn_subs.setToolTip("Subtitles (S)")
+        self.btn_slow.setToolTip("Slower")
+        self.btn_fast.setToolTip("Faster")
+        self.btn_playlist.setToolTip("Show current playlist")
+        self.btn_ar.setToolTip("Aspect ratio (Auto / 16:9 / 4:3 / 1:1)")
+        self.btn_pin.setToolTip("Keep window always on top (toggle)")
+        self.btn_pin.setCheckable(True)
 
         self.btn_play.clicked.connect(self.toggle_play_pause)
         self.btn_rewind.clicked.connect(lambda: self.seek_by(-10000))
         self.btn_ffwd.clicked.connect(lambda: self.seek_by(10000))
+        self.btn_slow.clicked.connect(lambda: self._adjust_rate(-0.25))
+        self.btn_fast.clicked.connect(lambda: self._adjust_rate(0.25))
+        self.btn_subs.clicked.connect(self._show_subs_menu)
+        self.btn_copy.clicked.connect(self._copy_url_to_clipboard)
+        self.btn_playlist.clicked.connect(self._show_playlist_menu)
+        self.btn_ar.clicked.connect(self._show_aspect_ratio_menu)
+        self.btn_pin.toggled.connect(self._toggle_always_on_top)
         self.btn_mute.clicked.connect(self.toggle_mute)
         self.btn_fs.clicked.connect(self.toggle_fullscreen)
         self.vol_slider.valueChanged.connect(self.set_volume)
@@ -323,7 +503,17 @@ class TVRoot(QWidget):
         btn_row.addWidget(self.btn_play)
         btn_row.addWidget(self.btn_ffwd)
         btn_row.addWidget(self.btn_next)
+        btn_row.addSpacing(10)
+        btn_row.addWidget(self.btn_slow)
+        btn_row.addWidget(self.rate_label)
+        btn_row.addWidget(self.btn_fast)
         btn_row.addStretch(1)
+        btn_row.addWidget(self.btn_playlist)
+        btn_row.addWidget(self.btn_ar)
+        btn_row.addWidget(self.btn_copy)
+        btn_row.addWidget(self.btn_subs)
+        btn_row.addWidget(self.btn_pin)
+        btn_row.addSpacing(6)
         btn_row.addWidget(self.btn_mute)
         btn_row.addWidget(self.vol_slider)
         btn_row.addWidget(self.btn_fs)
@@ -390,9 +580,21 @@ class TVRoot(QWidget):
             self._placeholder.deleteLater()
             self._placeholder = None
 
+        # Force re-bind every play — when the host re-parents TVRoot (e.g.
+        # mounting it inside the V3 PlayerScreen), the video_frame's native
+        # winId() changes, and libvlc keeps drawing into the stale handle:
+        # audio plays but the video is invisible. Resetting `_bound` makes
+        # `_bind_video_output` re-issue set_hwnd/set_xwindow/set_nsobject.
+        self._bound = False
+        self._bind_video_output()
+
+        self._current_url = url
+        self._current_title = title or ""
+        self._is_paused = False
+        self.btn_play.setText("⏯")
+
         media = self.instance.media_new(url)
         self.player.set_media(media)
-        self._bind_video_output()
         self.player.play()
 
     def stop(self):
@@ -415,7 +617,12 @@ class TVRoot(QWidget):
 
     # ------------------------------------------------------------- transport
     def toggle_play_pause(self):
-        if self.player.is_playing():
+        # Track state ourselves — libvlc's `is_playing()` can briefly return
+        # the wrong value right after pause/play() is called, which made the
+        # icon flicker out of sync with the user's spacebar / middle-click
+        # presses.
+        self._is_paused = not getattr(self, '_is_paused', False)
+        if self._is_paused:
             self.player.pause()
             self.btn_play.setText("▶")
         else:
@@ -437,9 +644,16 @@ class TVRoot(QWidget):
         self._wake_chrome()
 
     def toggle_mute(self):
-        self.player.audio_toggle_mute()
-        muted = self.player.audio_get_mute() == 1
-        self.btn_mute.setText("\U0001f507" if muted else "\U0001f50a")
+        # libvlc's `audio_get_mute()` returns -1 when no audio output exists
+        # yet (early in the play() lifecycle), which made the icon flip back
+        # and forth unreliably. Track the state ourselves and call
+        # audio_set_mute explicitly.
+        self._is_muted = not getattr(self, '_is_muted', False)
+        try:
+            self.player.audio_set_mute(self._is_muted)
+        except Exception:
+            pass
+        self.btn_mute.setText("\U0001f507" if self._is_muted else "\U0001f50a")
         self._wake_chrome()
 
     def toggle_fullscreen(self):
@@ -459,6 +673,388 @@ class TVRoot(QWidget):
             self._seeking = False
             self._wake_chrome()
 
+    def _adjust_rate(self, delta):
+        try:
+            rate = max(0.25, min(4.0, self.player.get_rate() + delta))
+        except Exception:
+            rate = 1.0
+        self.player.set_rate(rate)
+        self.rate_label.setText(f"{rate:.2f}x")
+        self._wake_chrome()
+
+    def _subs_tracks(self):
+        try:
+            descs = self.player.video_get_spu_description() or []
+            return [(int(i), n.decode("utf-8", errors="replace") if isinstance(n, bytes) else str(n))
+                    for i, n in descs]
+        except Exception:
+            return []
+
+    def _update_subs_button(self):
+        # Enable when libvlc reports any track OR we have a media loaded
+        # (so the user can always reach "Load file..." even on a stream that
+        # carries zero embedded subtitle tracks).
+        self.btn_subs.setEnabled(bool(self._current_url))
+
+    def _show_subs_menu(self):
+        menu = QMenu(self)
+        tracks = self._subs_tracks()
+        if tracks:
+            try:
+                current = self.player.video_get_spu()
+            except Exception:
+                current = -1
+            menu.addSection("Embedded tracks")
+            for tid, name in tracks:
+                act = QAction(name, self)
+                act.setCheckable(True)
+                act.setChecked(tid == current)
+                act.triggered.connect(lambda _, t=tid: self.player.video_set_spu(t))
+                menu.addAction(act)
+            # Quick "off" entry — libvlc uses SPU id -1 for "disable".
+            off_act = QAction("Disable subtitles", self)
+            off_act.triggered.connect(lambda: self.player.video_set_spu(-1))
+            menu.addAction(off_act)
+            menu.addSeparator()
+        load_act = QAction("Load subtitle file…", self)
+        load_act.triggered.connect(self._load_subtitle_file)
+        menu.addAction(load_act)
+        os_act = QAction("Search OpenSubtitles…", self)
+        os_act.triggered.connect(self._search_opensubtitles)
+        menu.addAction(os_act)
+        menu.addSeparator()
+        hide_act = QAction("Hide hardcoded subs (black strip)", self)
+        hide_act.setCheckable(True)
+        hide_act.setChecked(self._sub_hide_strip.isVisible())
+        hide_act.triggered.connect(self._toggle_sub_hide_strip)
+        menu.addAction(hide_act)
+        menu.exec_(self.btn_subs.mapToGlobal(self.btn_subs.rect().bottomLeft()))
+
+    def _toggle_sub_hide_strip(self):
+        if self._sub_hide_strip.isVisible():
+            self._sub_hide_strip.hide()
+        else:
+            # Park it across the bottom of the video where hardcoded subs
+            # usually sit. User can drag/resize from there.
+            w = max(320, self.width() // 2)
+            h = 60
+            self._sub_hide_strip.setGeometry(
+                (self.width() - w) // 2,
+                max(0, self.height() - 200),
+                w, h
+            )
+            self._sub_hide_strip.show()
+            self._sub_hide_strip.raise_()
+
+    def _opensubtitles_api_key(self):
+        """Read (and on first use, prompt for) the OpenSubtitles API key.
+        Stored in userdata.ini under [OpenSubtitles]."""
+        import configparser as _cp
+        cfg = _cp.ConfigParser()
+        try:
+            cfg.read(self._app_parent.user_data_file)
+        except Exception:
+            pass
+        key = ""
+        if cfg.has_option('OpenSubtitles', 'api_key'):
+            key = cfg['OpenSubtitles']['api_key']
+        if key:
+            return key
+        from PyQt5.QtWidgets import QInputDialog
+        new_key, ok = QInputDialog.getText(
+            self, "OpenSubtitles API key",
+            "Paste your OpenSubtitles API key.\n"
+            "Get one for free at https://www.opensubtitles.com/en/consumers (login → API key):"
+        )
+        if not ok or not new_key.strip():
+            return None
+        cfg['OpenSubtitles'] = {'api_key': new_key.strip()}
+        try:
+            with open(self._app_parent.user_data_file, 'w') as f:
+                cfg.write(f)
+        except OSError:
+            pass
+        return new_key.strip()
+
+    def _search_opensubtitles(self):
+        """Search the OpenSubtitles REST API, let the user pick a result,
+        download the subtitle file, and apply it via libvlc."""
+        api_key = self._opensubtitles_api_key()
+        if not api_key:
+            return
+
+        # Default query is the title we got from the host. Let the user edit it.
+        default_query = getattr(self, "_current_title", "") or ""
+        try:
+            media = self.player.get_media()
+            if media is not None and not default_query:
+                try:
+                    t = media.get_meta(0)
+                    if t:
+                        default_query = t
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        from PyQt5.QtWidgets import QInputDialog, QDialog, QDialogButtonBox, QListWidget
+        query, ok = QInputDialog.getText(
+            self, "Search OpenSubtitles", "Search for:", text=default_query
+        )
+        if not ok or not query.strip():
+            return
+
+        # Network call — keep the UI responsive by showing a brief wait cursor.
+        from PyQt5.QtGui import QGuiApplication
+        QGuiApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            import requests
+            headers = {
+                "Api-Key": api_key,
+                "User-Agent": "Nebula IPTV V1.0",
+                "Accept": "application/json",
+            }
+            resp = requests.get(
+                "https://api.opensubtitles.com/api/v1/subtitles",
+                headers=headers,
+                params={"query": query.strip(), "languages": "en,ar"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            QGuiApplication.restoreOverrideCursor()
+            QMessageBox.warning(self, "OpenSubtitles error",
+                                f"Search failed:\n{e}\n\nCheck your API key in userdata.ini "
+                                f"if the error mentions auth.")
+            return
+        finally:
+            QGuiApplication.restoreOverrideCursor()
+
+        results = data.get('data') or []
+        if not results:
+            QMessageBox.information(self, "OpenSubtitles", "No subtitles found for that query.")
+            return
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("OpenSubtitles results")
+        dlg.resize(560, 420)
+        dlay = QVBoxLayout(dlg)
+        listw = QListWidget()
+        for entry in results[:50]:
+            attrs = entry.get('attributes', {}) or {}
+            release = attrs.get('release') or attrs.get('feature_details', {}).get('movie_name') or "(unknown)"
+            lang    = attrs.get('language') or "?"
+            dl      = attrs.get('download_count') or 0
+            fps     = attrs.get('fps') or "?"
+            listw.addItem(f"[{lang}] {release}  —  {dl} downloads  •  {fps} fps")
+        dlay.addWidget(listw)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.accepted.connect(dlg.accept)
+        bb.rejected.connect(dlg.reject)
+        dlay.addWidget(bb)
+        if dlg.exec_() != QDialog.Accepted or listw.currentRow() < 0:
+            return
+
+        chosen = results[listw.currentRow()]
+        attrs = chosen.get('attributes', {}) or {}
+        files = attrs.get('files') or []
+        if not files:
+            QMessageBox.warning(self, "OpenSubtitles", "Selected entry has no downloadable file.")
+            return
+        file_id = files[0].get('file_id')
+        if not file_id:
+            QMessageBox.warning(self, "OpenSubtitles", "Missing file_id in API response.")
+            return
+
+        QGuiApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            import requests, tempfile, os
+            dl_resp = requests.post(
+                "https://api.opensubtitles.com/api/v1/download",
+                headers={"Api-Key": api_key, "User-Agent": "Nebula IPTV V1.0",
+                         "Accept": "application/json", "Content-Type": "application/json"},
+                json={"file_id": int(file_id)},
+                timeout=15,
+            )
+            dl_resp.raise_for_status()
+            link = dl_resp.json().get('link')
+            if not link:
+                raise RuntimeError("API didn't return a download link.")
+            srt = requests.get(link, timeout=30)
+            srt.raise_for_status()
+            tmp = tempfile.NamedTemporaryFile(suffix=".srt", delete=False)
+            tmp.write(srt.content)
+            tmp.close()
+        except Exception as e:
+            QGuiApplication.restoreOverrideCursor()
+            QMessageBox.warning(self, "OpenSubtitles error", f"Download failed:\n{e}")
+            return
+        finally:
+            QGuiApplication.restoreOverrideCursor()
+
+        # Apply via libvlc — same path as "Load subtitle file…".
+        try:
+            if hasattr(self.player, 'video_set_subtitle_file'):
+                self.player.video_set_subtitle_file(tmp.name)
+            elif hasattr(self.player, 'add_slave'):
+                self.player.add_slave(self._vlc.MediaSlaveType.subtitle, tmp.name, True)
+            QMessageBox.information(self, "OpenSubtitles", "Subtitle loaded.")
+        except Exception as e:
+            QMessageBox.warning(self, "Subtitle load failed", str(e))
+
+    def _load_subtitle_file(self):
+        path_, _ = QFileDialog.getOpenFileName(
+            self, "Choose subtitle file", "",
+            "Subtitle files (*.srt *.vtt *.ass *.ssa *.sub);;All files (*)"
+        )
+        if not path_:
+            return
+        try:
+            # libvlc 3.x has video_set_subtitle_file; 4.x renamed it.
+            ok = False
+            if hasattr(self.player, 'video_set_subtitle_file'):
+                ok = self.player.video_set_subtitle_file(path_) == 0
+            elif hasattr(self.player, 'add_slave'):
+                ok = self.player.add_slave(self._vlc.MediaSlaveType.subtitle, path_, True) == 0
+            if not ok:
+                QMessageBox.warning(self, "Subtitle load failed",
+                                    f"libvlc could not load:\n{path_}")
+        except Exception as e:
+            QMessageBox.warning(self, "Subtitle load failed", str(e))
+
+    def _copy_url_to_clipboard(self):
+        if not self._current_url:
+            return
+        QApplication.clipboard().setText(self._current_url)
+        # Tiny visual cue — flip the button text briefly.
+        self.btn_copy.setText("✓")
+        from PyQt5.QtCore import QTimer as _QTimer
+        _QTimer.singleShot(900, lambda: self.btn_copy.setText("\U0001f517"))
+
+    def set_navigable(self, navigable):
+        """For dead-end media (a single movie), disable prev/next so the
+        player chrome doesn't show buttons that go nowhere."""
+        self.btn_prev.setEnabled(bool(navigable))
+        self.btn_next.setEnabled(bool(navigable))
+        self.btn_prev.setVisible(bool(navigable))
+        self.btn_next.setVisible(bool(navigable))
+        self.btn_playlist.setEnabled(bool(navigable))
+        self.btn_playlist.setVisible(bool(navigable))
+
+    # ---------------------------------------------------- playlist panel
+    def set_playlist(self, items, current_index=0):
+        """`items` is a list of {'name': str, 'url': str}. Rebuilds the
+        right-edge slide-in panel so the user can jump straight to another
+        item without going back to the browse screen."""
+        self._playlist_items = list(items or [])
+        self._playlist_index = max(0, min(int(current_index), max(0, len(self._playlist_items) - 1)))
+
+        # Tear down the previous rows.
+        lay = self._playlist_inner_layout
+        while lay.count():
+            item = lay.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        # Rebuild — cap at 500 rows; the browse screen has the full list.
+        for i, entry in enumerate(self._playlist_items[:500]):
+            label = entry.get('name') or entry.get('url') or f"Item {i}"
+            btn = QPushButton(("▶  " if i == self._playlist_index else "     ") + label)
+            btn.setObjectName("playlistRowCurrent" if i == self._playlist_index else "playlistRow")
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setFocusPolicy(Qt.NoFocus)
+            btn.clicked.connect(lambda _, idx=i: self._jump_to_playlist_index(idx))
+            lay.addWidget(btn)
+        lay.addStretch(1)
+
+    def _show_playlist_menu(self):
+        # Slide the playlist panel in from the right (or hide it if open).
+        items = getattr(self, '_playlist_items', []) or []
+        if not items:
+            return
+        if self.playlist_panel.isVisible() and self.playlist_panel.x() >= self.width() - self.playlist_panel.width():
+            self._hide_playlist_panel()
+        else:
+            self._open_playlist_panel()
+
+    def _open_playlist_panel(self):
+        from PyQt5.QtCore import QPoint
+        self.playlist_panel.setGeometry(self.width(), 0,
+                                        self.playlist_panel.width(),
+                                        self.height())
+        self.playlist_panel.show()
+        self.playlist_panel.raise_()
+        self._playlist_anim.stop()
+        self._playlist_anim.setStartValue(QPoint(self.width(), 0))
+        self._playlist_anim.setEndValue(QPoint(self.width() - self.playlist_panel.width(), 0))
+        try:
+            self._playlist_anim.finished.disconnect()
+        except Exception:
+            pass
+        self._playlist_anim.start()
+
+    def _hide_playlist_panel(self):
+        from PyQt5.QtCore import QPoint
+        self._playlist_anim.stop()
+        self._playlist_anim.setStartValue(self.playlist_panel.pos())
+        self._playlist_anim.setEndValue(QPoint(self.width(), 0))
+        try:
+            self._playlist_anim.finished.disconnect()
+        except Exception:
+            pass
+        self._playlist_anim.finished.connect(self.playlist_panel.hide)
+        self._playlist_anim.start()
+
+    def _jump_to_playlist_index(self, idx):
+        items = getattr(self, '_playlist_items', []) or []
+        if not (0 <= idx < len(items)):
+            return
+        self._playlist_index = idx
+        url = items[idx].get('url')
+        if url:
+            # Hide the panel after a brief delay so the user sees the click feedback.
+            QTimer.singleShot(150, self._hide_playlist_panel)
+            self.play_url(url, title=items[idx].get('name', ''))
+            self.set_playlist(items, idx)  # refresh current-row highlight
+
+    # --------------------------------------------------- aspect ratio menu
+    def _show_aspect_ratio_menu(self):
+        menu = QMenu(self)
+        options = [("Auto", ""), ("16:9", "16:9"), ("4:3", "4:3"),
+                   ("1:1", "1:1"), ("16:10", "16:10"),
+                   ("2.35:1", "235:100"), ("2.39:1", "239:100")]
+        for label, value in options:
+            act = QAction(label, self)
+            act.triggered.connect(lambda _, v=value: self._set_aspect_ratio(v))
+            menu.addAction(act)
+        menu.exec_(self.btn_ar.mapToGlobal(self.btn_ar.rect().topLeft()))
+
+    def _toggle_always_on_top(self, checked):
+        # Toggle WindowStaysOnTopHint on the TOP-LEVEL window (the main
+        # QMainWindow), then re-show to make the flag take effect.
+        top = self.window()
+        if top is None:
+            return
+        flags = top.windowFlags()
+        if checked:
+            top.setWindowFlags(flags | Qt.WindowStaysOnTopHint)
+        else:
+            top.setWindowFlags(flags & ~Qt.WindowStaysOnTopHint)
+        top.show()
+        self._wake_chrome()
+
+    def _set_aspect_ratio(self, value):
+        try:
+            # libvlc accepts None / b"" for "auto", or a "W:H" byte string.
+            if value:
+                self.player.video_set_aspect_ratio(value.encode("utf-8"))
+            else:
+                self.player.video_set_aspect_ratio(None)
+            self.btn_ar.setText(value or "AR")
+        except Exception:
+            pass
+
     # --------------------------------------------------------- next/prev hooks
     def connect_next_prev(self, on_next, on_prev):
         """Host app supplies callbacks that walk the visible playlist."""
@@ -468,9 +1064,21 @@ class TVRoot(QWidget):
         self.btn_prev.setEnabled(True)
 
     # ------------------------------------------------------------- chrome
+    def disable_internal_chrome(self):
+        """Suppress the hamburger / sliding menu / edge trigger forever.
+        Used by V3 where the app's screen stack owns navigation."""
+        self._show_internal_chrome = False
+        try:
+            self.hamburger.hide()
+            self.menu.hide()
+            self.edge_trigger.hide()
+        except AttributeError:
+            pass
+
     def _wake_chrome(self):
         self.controls.show()
-        self.hamburger.show()
+        if self._show_internal_chrome:
+            self.hamburger.show()
         self.video_frame.unsetCursor()
         if self.player.is_playing():
             self._hide_timer.start(3000)
@@ -478,12 +1086,13 @@ class TVRoot(QWidget):
             self._hide_timer.stop()
 
     def _hide_chrome(self):
-        if self.menu.is_open():
+        if self._show_internal_chrome and self.menu.is_open():
             return
         if not self.player.is_playing():
             return
         self.controls.hide()
-        self.hamburger.hide()
+        if self._show_internal_chrome:
+            self.hamburger.hide()
         self.video_frame.setCursor(Qt.BlankCursor)
 
     def _poll_state(self):
@@ -498,6 +1107,7 @@ class TVRoot(QWidget):
                 self.seek_slider.setEnabled(False)
                 self.seek_slider.setValue(0)
                 self.time_label.setText("LIVE")
+            self._update_subs_button()
         except Exception:
             pass
 
@@ -521,13 +1131,31 @@ class TVRoot(QWidget):
                 return False
         return False
 
+    def _is_on_controls(self, obj):
+        # True if obj is the bottom controls bar or any of its descendants.
+        # Used so double-clicking a button doesn't accidentally toggle
+        # fullscreen, and so the volume-wheel-on-video doesn't fire when the
+        # user is dragging the volume slider itself.
+        w = obj
+        while w is not None:
+            if w is self.controls:
+                return True
+            try:
+                w = w.parent()
+            except Exception:
+                return False
+        return False
+
     def eventFilter(self, obj, event):
         if not self._is_in_self(obj):
             return False
         et = event.type()
         if et in (QEvent.MouseMove, QEvent.MouseButtonPress, QEvent.KeyPress, QEvent.Wheel):
             self._wake_chrome()
-        if et == QEvent.Wheel:
+
+        on_controls = self._is_on_controls(obj)
+
+        if et == QEvent.Wheel and not on_controls:
             try:
                 delta = event.angleDelta().y()
             except Exception:
@@ -535,9 +1163,33 @@ class TVRoot(QWidget):
             if delta:
                 self.vol_slider.setValue(max(0, min(100, self.vol_slider.value() + (5 if delta > 0 else -5))))
             return True
-        if et == QEvent.MouseButtonDblClick:
-            self.toggle_fullscreen()
-            return True
+        if et == QEvent.MouseButtonPress and not on_controls:
+            try:
+                btn = event.button()
+            except Exception:
+                btn = None
+            if btn == Qt.MidButton:
+                # Middle-click toggles play/pause — same icon-sync path as
+                # the spacebar and the on-screen Play button.
+                self.toggle_play_pause()
+                return True
+        if et == QEvent.MouseButtonDblClick and not on_controls:
+            # Only LEFT double-click toggles fullscreen. Middle-button double-
+            # clicks were spuriously firing fullscreen before — now they're
+            # treated as two play/pause toggles.
+            try:
+                btn = event.button()
+            except Exception:
+                btn = None
+            if btn == Qt.LeftButton:
+                self.toggle_fullscreen()
+                return True
+            if btn == Qt.MidButton:
+                # Second middle-click of a double-click sequence. The first
+                # press already triggered play/pause; toggle again to land
+                # back where we started — net effect = no change, no fs.
+                self.toggle_play_pause()
+                return True
         return False
 
     # --------------------------------------------------------------- menu API
@@ -582,6 +1234,19 @@ class TVRoot(QWidget):
         ch = 110
         self.controls.setGeometry(0, self.height() - ch, self.width(), ch)
         self.controls.raise_()
+
+        # Playlist panel: right-anchored, full height (minus bottom controls).
+        # If hidden, park it just off-screen so the slide-in animation has
+        # a sensible start position.
+        if self.playlist_panel.isVisible():
+            self.playlist_panel.setGeometry(
+                self.width() - self.playlist_panel.width(), 0,
+                self.playlist_panel.width(), self.height() - ch
+            )
+        else:
+            self.playlist_panel.resize(self.playlist_panel.width(), self.height() - ch)
+            self.playlist_panel.move(self.width(), 0)
+        self.playlist_panel.raise_()
 
         # Phase 3 overlays will use this hook to position themselves at the
         # top / bottom / left edges.

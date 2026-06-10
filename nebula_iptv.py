@@ -26,24 +26,26 @@ from PyQt5.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QTreeView, QAction, QMenu, QComboBox, QSplitter
 )
 
-from AccountManager import AccountManager
-from CustomPyQtWidgets import LiveInfoBox, MovieInfoBox, SeriesInfoBox, EmbeddedPlayerWindow
+from accounts import AccountManager
+from info_boxes import LiveInfoBox, MovieInfoBox, SeriesInfoBox
 from tv_root import TVRoot
-import Threadpools
-from Threadpools import FetchDataWorker, SearchWorker, OnlineWorker, EPGWorker, MovieInfoFetcher, SeriesInfoFetcher, ImageFetcher
+from tv_screens import HomeScreen, BrowseScreen, TVScreenStack, PlayerScreen
+import workers
+from workers import FetchDataWorker, SearchWorker, OnlineWorker, EPGWorker, MovieInfoFetcher, SeriesInfoFetcher, ImageFetcher
 
-CURRENT_VERSION = "V3.00.00-alpha1"
+CURRENT_VERSION = "V1.00.00"
+APP_NAME        = "Nebula IPTV"
 
 is_windows  = sys.platform.startswith('win')
 is_mac      = sys.platform.startswith('darwin')
 is_linux    = sys.platform.startswith('linux')
 
-GITHUB_REPO = "Youri666/Xtream-m3u_plus-IPTV-Player"
+GITHUB_REPO = "hossamaladdin/nebula-iptv-desktop"
 
 class IPTVPlayerApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"IPTV Player {CURRENT_VERSION}")
+        self.setWindowTitle(f"{APP_NAME} {CURRENT_VERSION}")
         self.resize(1300, 900)
 
         self.user_agents = [
@@ -357,43 +359,86 @@ class IPTVPlayerApp(QMainWindow):
         #Add iptv info text to info tab
         self.info_tab_layout.addWidget(self.iptv_info_text)
 
-        # V3 central layout: a QStackedWidget with two pages.
-        # Page 0 = classic V2 tabs view (preserved unchanged).
-        # Page 1 = TVRoot, the libvlc-backed full-window video surface.
-        # Ctrl+T (or the future TV button) toggles between them. The internal
-        # player automatically switches to page 1 when it starts a stream.
-        from PyQt5.QtWidgets import QStackedWidget, QShortcut
+        # Nebula IPTV V1 is V3-only — no classic mode toggle. We hide the
+        # tab widget + progress bar (they still exist so the V2 worker code
+        # paths that touch them don't crash), then build the V3 screen stack
+        # straight away and use IT as the central widget.
+        from PyQt5.QtWidgets import QShortcut
         from PyQt5.QtGui import QKeySequence
 
-        classic_view = QWidget()
-        classic_layout = QVBoxLayout(classic_view)
-        classic_layout.setContentsMargins(10, 10, 10, 10)
-        classic_layout.setSpacing(10)
-        classic_layout.addWidget(self.tab_widget)
-        classic_layout.addWidget(self.progress_bar)
+        self.tab_widget.hide()
+        self.progress_bar.hide()
+        self.tab_widget.setParent(self)
+        self.progress_bar.setParent(self)
 
-        # TVRoot is created lazily because libvlc.Instance() can be slow and
-        # we don't want to pay that cost when the user is on a libvlc-less box.
-        # `_ensure_tv_root` builds it on first use and adds it to the stack.
+        # TVRoot is created lazily — libvlc.Instance() can be slow.
         self._tv_root = None
 
-        self._main_stack = QStackedWidget()
-        self._main_stack.addWidget(classic_view)   # page 0 — classic
-        self.setCentralWidget(self._main_stack)
+        # Build the V3 screen stack and use it as the central widget.
+        self._build_v3_screens()
+        self._populate_v3_browse_content()
+        self.setCentralWidget(self._v3_stack)
+        self._v3_stack.setCurrentIndex(0)
 
-        # Hotkey: Ctrl+T flips views. Lets the user verify TV mode works
-        # without launching the internal player.
-        self._tv_toggle_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        self._tv_toggle_shortcut.activated.connect(self._toggle_tv_view)
+        # Re-apply the saved theme NOW that the V3 screens exist. The earlier
+        # _apply_theme call from loadDataAtStartup ran before _build_v3_screens
+        # so it couldn't reach _home_screen / _browse_screens, leaving them
+        # stuck on the default dark stylesheet even in Light mode.
+        try:
+            self._apply_theme(getattr(self, '_saved_theme', None) or "System")
+        except Exception as e:
+            print(f"Re-applying theme after V3 build failed: {e}")
 
-        # In TV view, M toggles the sliding menu (open / close).
-        self._tv_menu_shortcut = QShortcut(QKeySequence("M"), self)
-        self._tv_menu_shortcut.setContext(Qt.ApplicationShortcut)
-        self._tv_menu_shortcut.activated.connect(self._toggle_tv_menu)
+        # Global Esc / F11 — there's no other way out of fullscreen because
+        # the bottom controls overlay auto-hides. Esc also pops the player
+        # screen back to the previous browse screen (and stops the media).
+        self._esc_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self._esc_shortcut.setContext(Qt.ApplicationShortcut)
+        self._esc_shortcut.activated.connect(self._on_esc)
+        self._f11_shortcut = QShortcut(QKeySequence("F11"), self)
+        self._f11_shortcut.setContext(Qt.ApplicationShortcut)
+        self._f11_shortcut.activated.connect(self._toggle_fullscreen)
+        self._fs_shortcut = QShortcut(QKeySequence("F"), self)
+        self._fs_shortcut.setContext(Qt.ApplicationShortcut)
+        self._fs_shortcut.activated.connect(self._toggle_fullscreen)
 
-    def _toggle_tv_menu(self):
-        if self._main_stack.currentIndex() == 1 and self._tv_root is not None:
-            self._tv_root.toggle_menu()
+        # Spacebar = play/pause (only when the player screen is the active page).
+        self._space_shortcut = QShortcut(QKeySequence(Qt.Key_Space), self)
+        self._space_shortcut.setContext(Qt.ApplicationShortcut)
+        self._space_shortcut.activated.connect(self._on_space)
+
+    def _on_space(self):
+        # Only fire when we're on the player screen so the spacebar doesn't
+        # interfere with text input elsewhere (the Add-account form,
+        # category search bars, etc.). All app-wide shortcuts get the same
+        # treatment via this guard.
+        from PyQt5.QtWidgets import QApplication
+        focused = QApplication.focusWidget()
+        if focused is not None and focused.metaObject().className() in ("QLineEdit", "QTextEdit"):
+            return
+        if getattr(self, '_tv_root', None) is None:
+            return
+        if (hasattr(self, '_v3_stack') and self._player_screen is not None
+                and self._v3_stack.currentWidget() is self._player_screen):
+            self._tv_root.toggle_play_pause()
+
+    def _toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+
+    def _on_esc(self):
+        # Priority: leave fullscreen if we're in it; otherwise go back from
+        # the player screen (and stop the media).
+        if self.isFullScreen():
+            self.showNormal()
+            return
+        if (hasattr(self, '_v3_stack') and self._v3_stack is not None and
+                hasattr(self, '_player_screen') and self._player_screen is not None and
+                self._v3_stack.currentWidget() is self._player_screen):
+            self._on_player_back()
+
 
     def updateUserDataFile(self):
         # Load the configuration file. A corrupted .ini must not crash the app —
@@ -695,10 +740,23 @@ class IPTVPlayerApp(QMainWindow):
         for list_widget in [self.category_list_live, self.category_list_movies, self.category_list_series]:
             list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             list_widget.setIconSize(standard_icon_size)
+            # Explicit palette(...) tokens — without them, Qt's stylesheet
+            # parser stops inheriting palette colors and the list text can
+            # end up white-on-white in Light theme.
             list_widget.setStyleSheet("""
+                QListWidget {
+                    background: palette(base);
+                    color: palette(text);
+                    border: 1px solid palette(shadow);
+                }
                 QListWidget::item {
                     padding-top: 5px;
                     padding-bottom: 5px;
+                    color: palette(text);
+                }
+                QListWidget::item:selected {
+                    background: palette(highlight);
+                    color: palette(highlighted-text);
                 }
             """)
 
@@ -743,10 +801,23 @@ class IPTVPlayerApp(QMainWindow):
         for list_widget in [self.streaming_list_live, self.streaming_list_movies, self.streaming_list_series]:
             list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             list_widget.setIconSize(standard_icon_size)
+            # Explicit palette(...) tokens — without them, Qt's stylesheet
+            # parser stops inheriting palette colors and the list text can
+            # end up white-on-white in Light theme.
             list_widget.setStyleSheet("""
+                QListWidget {
+                    background: palette(base);
+                    color: palette(text);
+                    border: 1px solid palette(shadow);
+                }
                 QListWidget::item {
                     padding-top: 5px;
                     padding-bottom: 5px;
+                    color: palette(text);
+                }
+                QListWidget::item:selected {
+                    background: palette(highlight);
+                    color: palette(highlighted-text);
                 }
             """)
 
@@ -884,27 +955,6 @@ class IPTVPlayerApp(QMainWindow):
         self.settings_layout.setSpacing(20)
         self.settings_layout.setAlignment(Qt.AlignTop)
 
-        self.address_book_button = QPushButton("IPTV accounts")
-        self.address_book_button.setIcon(self.account_manager_icon)
-        self.address_book_button.setToolTip("Manage IPTV accounts")
-        self.address_book_button.clicked.connect(self.open_address_book)
-
-        self.choose_player_button = QPushButton("Choose Media Player")
-        self.choose_player_button.setIcon(self.mediaplayer_icon)
-        self.choose_player_button.setToolTip("Set the Media Player used for watching content, use e.g. VLC or SMPlayer")
-        self.choose_player_button.clicked.connect(self.choose_external_player)
-
-        self.use_embedded_player_button = QPushButton("Use Internal Player (VLC)")
-        self.use_embedded_player_button.setIcon(self.mediaplayer_icon)
-        self.use_embedded_player_button.setToolTip(
-            "Play streams inside this window using the built-in libvlc backend.\n"
-            "Requires VLC to be installed on this machine — download from videolan.org."
-        )
-        self.use_embedded_player_button.clicked.connect(self.use_embedded_player)
-
-        self.current_player_label = QLabel("")
-        self.current_player_label.setStyleSheet("color: #5b8def;")
-
         self.vods_enabled_checkbox = QCheckBox("VODs enabled")
         self.vods_enabled_checkbox.setToolTip("Load the Movies/Series tabs for the IPTV account")
         self.vods_enabled_checkbox.stateChanged.connect(self.toggleVODs)
@@ -943,19 +993,6 @@ class IPTVPlayerApp(QMainWindow):
         )
         self.stream_status_checkbox.stateChanged.connect(self.toggleStreamStatus)
 
-        self.theme_select_box = QComboBox()
-        self.theme_select_box.addItems(["System", "Light", "Dark"])
-        self.theme_select_box.setToolTip("Switch between Light, Dark, or follow the OS setting (default).")
-        self.theme_select_box.currentTextChanged.connect(self.themeChanged)
-
-        self.tv_mode_checkbox = QCheckBox("TV mode — play video as the main window background (Ctrl+T)")
-        self.tv_mode_checkbox.setToolTip(
-            "V3 experimental: when on, the Internal Player plays the stream INSIDE\n"
-            "the main window instead of a floating window. Press Ctrl+T to flip\n"
-            "between the classic tab view and the TV view."
-        )
-        self.tv_mode_checkbox.stateChanged.connect(self.toggleTvMode)
-
         #Set timeout integer validator
         timeout_validator = QIntValidator(0, 999)
 
@@ -975,10 +1012,6 @@ class IPTVPlayerApp(QMainWindow):
         self.set_live_status_timeout.returnPressed.connect(lambda: self.setTimeout(self.set_live_status_timeout))
 
         #Add widgets to settings tab layout
-        self.settings_layout.addWidget(self.address_book_button,                            0, 0)
-        self.settings_layout.addWidget(self.choose_player_button,                           0, 1)
-        self.settings_layout.addWidget(self.use_embedded_player_button,                     0, 2)
-        self.settings_layout.addWidget(self.current_player_label,                          10, 0, 1, 3)
         self.settings_layout.addWidget(self.vods_enabled_checkbox,                          1, 0)
         self.settings_layout.addWidget(self.keep_on_top_checkbox,                           2, 0)
         self.settings_layout.addWidget(QLabel("Default sorting order: "),                   3, 0)
@@ -986,9 +1019,6 @@ class IPTVPlayerApp(QMainWindow):
         self.settings_layout.addWidget(self.update_checker,                                 4, 0)
         self.settings_layout.addWidget(self.auto_update_checkbox,                           4, 1)
         self.settings_layout.addWidget(self.stream_status_checkbox,                         9, 0)
-        self.settings_layout.addWidget(QLabel("Theme: "),                                  11, 0)
-        self.settings_layout.addWidget(self.theme_select_box,                              11, 1)
-        self.settings_layout.addWidget(self.tv_mode_checkbox,                              12, 0, 1, 2)
 
         #Advanced options
         self.settings_layout.addWidget(QLabel("Select User-Agent (Advanced option): "),         5, 0)
@@ -1031,7 +1061,7 @@ class IPTVPlayerApp(QMainWindow):
         if config.has_option('User-Agent', 'user-agent'):
             self.current_user_agent = config['User-Agent']['user-agent']
         else:
-            self.current_user_agent = Threadpools.DEFAULT_USER_AGENT_HEADER
+            self.current_user_agent = workers.DEFAULT_USER_AGENT_HEADER
 
         #Update combobox to selection
         self.select_user_agent_box.setCurrentText(self.current_user_agent)
@@ -1080,17 +1110,17 @@ class IPTVPlayerApp(QMainWindow):
             #Check which timeout value has been changed
             match lineedit:
                 case self.set_connection_timeout:
-                    Threadpools.CONNECTION_TIMEOUT = int(value)
+                    workers.CONNECTION_TIMEOUT = int(value)
 
                     config['Timeouts']['CONNECTION_TIMEOUT'] = value
 
                 case self.set_read_timeout:
-                    Threadpools.READ_TIMEOUT = int(value)
+                    workers.READ_TIMEOUT = int(value)
 
                     config['Timeouts']['READ_TIMEOUT'] = value
 
                 case self.set_live_status_timeout:
-                    Threadpools.LIVE_STATUS_TIMEOUT = int(value)
+                    workers.LIVE_STATUS_TIMEOUT = int(value)
 
                     config['Timeouts']['LIVE_STATUS_TIMEOUT'] = value
 
@@ -1111,25 +1141,25 @@ class IPTVPlayerApp(QMainWindow):
             config.read(self.user_data_file)
 
             #Set default values
-            tmp_connection_timeout  = str(Threadpools.CONNECTION_TIMEOUT)
-            tmp_read_timeout        = str(Threadpools.READ_TIMEOUT)
-            tmp_live_status_timeout = str(Threadpools.LIVE_STATUS_TIMEOUT)
+            tmp_connection_timeout  = str(workers.CONNECTION_TIMEOUT)
+            tmp_read_timeout        = str(workers.READ_TIMEOUT)
+            tmp_live_status_timeout = str(workers.LIVE_STATUS_TIMEOUT)
 
             #Check if defined in config
             if config.has_section("Timeouts"):
                 if config.has_option("Timeouts", "CONNECTION_TIMEOUT"):
                     #Set connection timeout if defined
-                    Threadpools.CONNECTION_TIMEOUT = int(config['Timeouts']['CONNECTION_TIMEOUT'])
+                    workers.CONNECTION_TIMEOUT = int(config['Timeouts']['CONNECTION_TIMEOUT'])
                     tmp_connection_timeout = config['Timeouts']['CONNECTION_TIMEOUT']
 
                 if config.has_option("Timeouts", "READ_TIMEOUT"):
                     #Set read timeout if defined
-                    Threadpools.READ_TIMEOUT = int(config['Timeouts']['READ_TIMEOUT'])
+                    workers.READ_TIMEOUT = int(config['Timeouts']['READ_TIMEOUT'])
                     tmp_read_timeout = config['Timeouts']['READ_TIMEOUT']
 
                 if config.has_option("Timeouts", "LIVE_STATUS_TIMEOUT"):
                     #Set live status timeout if defined
-                    Threadpools.LIVE_STATUS_TIMEOUT = int(config['Timeouts']['LIVE_STATUS_TIMEOUT'])
+                    workers.LIVE_STATUS_TIMEOUT = int(config['Timeouts']['LIVE_STATUS_TIMEOUT'])
                     tmp_live_status_timeout = config['Timeouts']['LIVE_STATUS_TIMEOUT']
                     
             #Set values in corresponding LineEdit widgets
@@ -1155,7 +1185,7 @@ class IPTVPlayerApp(QMainWindow):
             #Request data from url. Pair a small read-timeout with the connection timeout —
             #without one a slow GitHub response can block the main thread indefinitely
             #(the previous code only set the connection timeout).
-            git_resp = requests.get(git_api_url, timeout=(Threadpools.CONNECTION_TIMEOUT, 5))
+            git_resp = requests.get(git_api_url, timeout=(workers.CONNECTION_TIMEOUT, 5))
 
             #Get data and latest version
             data = git_resp.json()
@@ -1204,32 +1234,31 @@ class IPTVPlayerApp(QMainWindow):
             config.write(config_file)
 
     def loadDefaultAutoUpdate(self):
-        #Read userdata file
+        # Nebula V1 default: auto-update OFF. V2 used to check upstream on every
+        # launch and pop a modal "update available" dialog before the main
+        # window appeared, which blocked startup of the V3 home screen until
+        # the user dismissed the dialog. The checkbox stays in Settings so
+        # users can still flip it on if they want.
         config = configparser.ConfigParser()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
             config = configparser.ConfigParser()
 
-        #Check if updater is in config
+        enabled = False
         if config.has_option('Updater', 'auto-update-checker'):
-            if config['Updater']['auto-update-checker'] == 'True':
-                #Set checkbox checked
-                self.auto_update_checkbox.setCheckState(Qt.Checked)
-
-                #If auto update checker is enabled, check for update
-                self.checkForUpdates(False)
-
-        #If not enable the auto-update-checker by default
+            enabled = (config['Updater']['auto-update-checker'] == 'True')
         else:
-            #Write default value to userdata file
-            config['Updater'] = {'auto-update-checker': True}
-
+            config['Updater'] = {'auto-update-checker': 'False'}
             try:
                 with open(self.user_data_file, 'w') as config_file:
                     config.write(config_file)
-            except OSError as e:
-                print(f"Could not write user data file: {e}")
+            except OSError:
+                pass
+
+        self.auto_update_checkbox.setCheckState(Qt.Checked if enabled else Qt.Unchecked)
+        if enabled:
+            self.checkForUpdates(False)
 
             #Set checkbox checked
             self.auto_update_checkbox.setCheckState(Qt.Checked)
@@ -1252,10 +1281,6 @@ class IPTVPlayerApp(QMainWindow):
         self.playlist_progress_animation.setEasingCurve(QEasingCurve.InOutQuad)
 
     def loadDataAtStartup(self):
-        #Load external media player
-        self.external_player_command = self.load_external_player_command()
-        self._refresh_current_player_label()
-
         #Load default sorting setting
         self.loadDefaultSortingOrder()
 
@@ -1273,9 +1298,6 @@ class IPTVPlayerApp(QMainWindow):
 
         #Apply persisted theme (Light / Dark / System) — default System
         self.loadDefaultTheme()
-
-        #Load V3 TV-mode preference (default: off)
-        self.loadDefaultTvMode()
 
         #Load startup credentials
         self.loadStartupCredentials()
@@ -1363,29 +1385,85 @@ class IPTVPlayerApp(QMainWindow):
             return False
 
     def _apply_theme(self, theme_name):
-        # Theme names: "System", "Light", "Dark". Anything else falls back to System.
+        # Theme names: "System", "Light", "Dark". Palettes are Nord-inspired
+        # (https://www.nordtheme.com/) — soft, low-luminance background tones
+        # and muted foreground text so neither the white in light mode nor
+        # the white text in dark mode burns your eyes during long sessions.
+        # No pure #ffffff or #000000 anywhere.
         app = QtWidgets.qApp
         if theme_name == "Dark" or (theme_name == "System" and self._is_system_dark()):
+            # Nord "Polar Night" base + "Snow Storm" muted greys for text.
             palette = QPalette()
-            palette.setColor(QPalette.Window,          QColor(45, 45, 48))
-            palette.setColor(QPalette.WindowText,      Qt.white)
-            palette.setColor(QPalette.Base,            QColor(30, 30, 30))
-            palette.setColor(QPalette.AlternateBase,   QColor(45, 45, 48))
-            palette.setColor(QPalette.ToolTipBase,     QColor(45, 45, 48))
-            palette.setColor(QPalette.ToolTipText,     Qt.white)
-            palette.setColor(QPalette.Text,            Qt.white)
-            palette.setColor(QPalette.Button,          QColor(45, 45, 48))
-            palette.setColor(QPalette.ButtonText,      Qt.white)
-            palette.setColor(QPalette.BrightText,      Qt.red)
-            palette.setColor(QPalette.Link,            QColor(91, 141, 239))
-            palette.setColor(QPalette.Highlight,       QColor(91, 141, 239))
-            palette.setColor(QPalette.HighlightedText, Qt.black)
-            palette.setColor(QPalette.Disabled, QPalette.Text,       QColor(127, 127, 127))
-            palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(127, 127, 127))
+            palette.setColor(QPalette.Window,          QColor("#2e3440"))   # nord0 — bg
+            palette.setColor(QPalette.WindowText,      QColor("#d8dee9"))   # nord4 — muted off-white
+            palette.setColor(QPalette.Base,            QColor("#3b4252"))   # nord1 — list/input bg
+            palette.setColor(QPalette.AlternateBase,   QColor("#434c5e"))   # nord2
+            palette.setColor(QPalette.ToolTipBase,     QColor("#3b4252"))
+            palette.setColor(QPalette.ToolTipText,     QColor("#d8dee9"))
+            palette.setColor(QPalette.Text,            QColor("#d8dee9"))
+            palette.setColor(QPalette.PlaceholderText, QColor("#7b8394"))
+            palette.setColor(QPalette.Button,          QColor("#434c5e"))   # nord2
+            palette.setColor(QPalette.ButtonText,      QColor("#e5e9f0"))   # nord5
+            palette.setColor(QPalette.BrightText,      QColor("#bf616a"))   # nord11 — aurora red
+            palette.setColor(QPalette.Link,            QColor("#88c0d0"))   # nord8 — frost
+            palette.setColor(QPalette.LinkVisited,     QColor("#b48ead"))   # nord15
+            palette.setColor(QPalette.Highlight,       QColor("#5e81ac"))   # nord10 — frost emphasis
+            palette.setColor(QPalette.HighlightedText, QColor("#eceff4"))   # nord6
+            palette.setColor(QPalette.Shadow,          QColor("#4c566a"))   # nord3
+            palette.setColor(QPalette.Disabled, QPalette.Text,       QColor("#6c7888"))
+            palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor("#6c7888"))
+            palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor("#6c7888"))
             app.setPalette(palette)
         else:
-            # Fusion's built-in light palette.
-            app.setPalette(app.style().standardPalette())
+            # Nord "Snow Storm" base + "Polar Night" near-black for text. Both
+            # the window bg AND the list bg are soft off-white (#eceff4 /
+            # #e5e9f0), NOT pure #ffffff — the previous light palette was
+            # blinding in dense category lists.
+            palette = QPalette()
+            palette.setColor(QPalette.Window,          QColor("#eceff4"))   # nord6 — softest bg
+            palette.setColor(QPalette.WindowText,      QColor("#2e3440"))   # nord0 — near-black text
+            palette.setColor(QPalette.Base,            QColor("#e5e9f0"))   # nord5 — list/input bg
+            palette.setColor(QPalette.AlternateBase,   QColor("#d8dee9"))   # nord4
+            palette.setColor(QPalette.ToolTipBase,     QColor("#eceff4"))
+            palette.setColor(QPalette.ToolTipText,     QColor("#2e3440"))
+            palette.setColor(QPalette.Text,            QColor("#2e3440"))
+            palette.setColor(QPalette.PlaceholderText, QColor("#6c7888"))
+            palette.setColor(QPalette.Button,          QColor("#d8dee9"))   # nord4
+            palette.setColor(QPalette.ButtonText,      QColor("#2e3440"))
+            palette.setColor(QPalette.BrightText,      QColor("#bf616a"))   # nord11 — danger
+            palette.setColor(QPalette.Link,            QColor("#5e81ac"))   # nord10
+            palette.setColor(QPalette.LinkVisited,     QColor("#b48ead"))
+            palette.setColor(QPalette.Highlight,       QColor("#5e81ac"))   # nord10
+            palette.setColor(QPalette.HighlightedText, QColor("#eceff4"))
+            palette.setColor(QPalette.Shadow,          QColor("#a3aab8"))   # border-ish
+            palette.setColor(QPalette.Disabled, QPalette.Text,       QColor("#8c95a6"))
+            palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor("#8c95a6"))
+            palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor("#8c95a6"))
+            app.setPalette(palette)
+
+        # Propagate to the V3 screens that carry their own stylesheets — the
+        # Qt palette alone doesn't reach them because they each setStyleSheet()
+        # with hardcoded colors. Resolve "System" to a concrete value first.
+        effective = theme_name
+        if theme_name == "System":
+            effective = "Dark" if self._is_system_dark() else "Light"
+        if hasattr(self, '_home_screen') and self._home_screen is not None:
+            try:
+                self._home_screen.set_theme(effective)
+            except Exception:
+                pass
+        for s in (getattr(self, '_browse_screens', {}) or {}).values():
+            try:
+                s.set_theme(effective)
+            except Exception:
+                pass
+        for attr in ('_settings_screen', '_info_screen', '_player_screen'):
+            s = getattr(self, attr, None)
+            if s is not None and hasattr(s, 'set_theme'):
+                try:
+                    s.set_theme(effective)
+                except Exception:
+                    pass
 
     def themeChanged(self, theme_name):
         self._apply_theme(theme_name)
@@ -1412,41 +1490,8 @@ class IPTVPlayerApp(QMainWindow):
             mode = config["Theme"]["mode"]
             if mode not in ("System", "Light", "Dark"):
                 mode = "System"
-        # Block signals so applying the value to the combobox doesn't re-trigger
-        # a write to disk.
-        self.theme_select_box.blockSignals(True)
-        self.theme_select_box.setCurrentText(mode)
-        self.theme_select_box.blockSignals(False)
+        self._saved_theme = mode
         self._apply_theme(mode)
-
-    def toggleTvMode(self, state):
-        checked = bool(state)
-        self._tv_mode_default = checked
-        config = configparser.ConfigParser()
-        try:
-            config.read(self.user_data_file)
-        except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
-        config['TVMode'] = {'enabled': str(checked)}
-        try:
-            with open(self.user_data_file, 'w') as config_file:
-                config.write(config_file)
-        except OSError as e:
-            print(f"Could not write user data file: {e}")
-
-    def loadDefaultTvMode(self):
-        config = configparser.ConfigParser()
-        try:
-            config.read(self.user_data_file)
-        except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
-        if config.has_option('TVMode', 'enabled'):
-            self._tv_mode_default = (config['TVMode']['enabled'] == 'True')
-        else:
-            self._tv_mode_default = False
-        self.tv_mode_checkbox.blockSignals(True)
-        self.tv_mode_checkbox.setCheckState(Qt.Checked if self._tv_mode_default else Qt.Unchecked)
-        self.tv_mode_checkbox.blockSignals(False)
 
     def toggleStreamStatus(self, state):
         checked = bool(state)
@@ -1586,22 +1631,33 @@ class IPTVPlayerApp(QMainWindow):
             return False
 
     def set_progress_text(self, text):
-        self.progress_bar.setFormat(text)
-        QtWidgets.qApp.processEvents()
-        # QtWidgets.qApp.sendPostedEvents()
+        # The progress bar is hidden in V3 mode but workers still post updates.
+        # Guard against the (rare) case where its C++ peer got deleted across
+        # a setCentralWidget swap.
+        try:
+            self.progress_bar.setFormat(text)
+            QtWidgets.qApp.processEvents()
+        except RuntimeError:
+            pass
 
     def set_progress_bar(self, val, text):
-        self.progress_bar.setFormat(text)
-        self.progress_bar.setValue(val)
-        QtWidgets.qApp.processEvents()
+        try:
+            self.progress_bar.setFormat(text)
+            self.progress_bar.setValue(val)
+            QtWidgets.qApp.processEvents()
+        except RuntimeError:
+            pass
 
     def animate_progress(self, start, end, text):
-        self.playlist_progress_animation.stop()
-        self.playlist_progress_animation.setStartValue(start)
-        self.playlist_progress_animation.setEndValue(end)
-        self.set_progress_text(text)
-        self.playlist_progress_animation.start()
-        QtWidgets.qApp.processEvents()
+        try:
+            self.playlist_progress_animation.stop()
+            self.playlist_progress_animation.setStartValue(start)
+            self.playlist_progress_animation.setEndValue(end)
+            self.set_progress_text(text)
+            self.playlist_progress_animation.start()
+            QtWidgets.qApp.processEvents()
+        except RuntimeError:
+            pass
 
     def login(self):
         # When logging into another server, reset the progress bar
@@ -2607,174 +2663,23 @@ class IPTVPlayerApp(QMainWindow):
         self.animate_progress(0, 100, "Loading finished")
 
     def play_item(self, url):
+        # V1 is libvlc-only — every stream is routed through the V3 in-window
+        # player. No external-player fork, no choice of media player.
         if not url:
             self.animate_progress(0, 100, "Stream URL not found")
-
-            #Create warning message box to indicate error
-            error_dialog = QMessageBox()
-            error_dialog.setIcon(QMessageBox.Warning)
-            error_dialog.setWindowTitle("Invalid stream URL")
-            error_dialog.setText(f"Invalid stream URL!\nPlease try again.\n\nURL: {url}")
-
-            #Set only OK button
-            error_dialog.setStandardButtons(QMessageBox.Ok)
-
-            #Show error dialog
-            error_dialog.exec_()
-            return
-
-        if self.external_player_command:
-            try:
-                print(f"Going to play: {url}")
-                self.animate_progress(0, 100, "Loading player for streaming")
-
-                # Embedded VLC marker — short-circuit before constructing any subprocess
-                # command. The marker is set when the user picks "Embedded VLC" in
-                # Settings (so we don't store a real path that could be invoked by accident).
-                if self.external_player_command == "<embedded-vlc>":
-                    self._play_embedded(url)
-                    return
-
-                ua = (self.current_user_agent or "").strip()
-                exe_lower = self.external_player_command.lower()
-
-                if is_linux:
-                    #Ensure the external player command is executable
-                    if not os.access(self.external_player_command, os.X_OK):
-                        self.animate_progress(0, 100, "Selected player is not executable")
-                        return
-
-                    # Linux: list-form Popen is safe (no shell quirks); each player
-                    # parses its own argv cleanly.
-                    player_cmd = [self.external_player_command]
-                    if exe_lower.endswith("vlc") and ua:
-                        player_cmd.append(f"--http-user-agent={ua}")
-                    elif exe_lower.endswith(("mpv", "mpv.com")) and ua:
-                        player_cmd.append(f"--user-agent={ua}")
-                    player_cmd.append(url)
-                    subprocess.Popen(player_cmd)
-
-                elif is_windows:
-                    # Windows: we build a single command string so each player's
-                    # quoting expectations are met EXACTLY — list2cmdline wraps each
-                    # arg in outer quotes, which breaks PotPlayer's `/key="value"`
-                    # parser (it expects the quotes INSIDE the value, not around the
-                    # whole token). See issue #47 and the regression the user reported
-                    # after the first round of fixes.
-                    exe_q = f'"{self.external_player_command}"'
-                    url_q = f'"{url}"'
-
-                    if "potplayermini64.exe" in exe_lower or "potplayer" in exe_lower:
-                        ua_arg = f' /user_agent="{ua}"' if ua else ""
-                        player_cmd = f'{exe_q} {url_q}{ua_arg}'
-
-                    elif exe_lower.endswith(("mpv.exe", "mpv.com")) or "\\mpv\\" in exe_lower:
-                        ua_arg = f' --user-agent="{ua}"' if ua else ""
-                        player_cmd = f'{exe_q}{ua_arg} {url_q}'
-
-                    elif exe_lower.endswith("vlc.exe"):
-                        ua_arg = f' --http-user-agent="{ua}"' if ua else ""
-                        player_cmd = f'{exe_q}{ua_arg} {url_q}'
-
-                    else:
-                        # MPC-HC, MPC-BE, generic players: just exe + URL.
-                        player_cmd = f'{exe_q} {url_q}'
-
-                    subprocess.Popen(player_cmd)
-
-                else:
-                    subprocess.Popen([self.external_player_command, url])
-
-            except Exception as e:
-                import traceback
-                self.animate_progress(0, 100, "Failed playing stream")
-                print(f"Failed playing stream [{url}]: {e}")
-                traceback.print_exc()
-                try:
-                    error_dialog = QMessageBox(self)
-                    error_dialog.setIcon(QMessageBox.Warning)
-                    error_dialog.setWindowTitle("Player failed to launch")
-                    error_dialog.setText(
-                        f"Could not launch the external player.\n\n"
-                        f"Player: {self.external_player_command}\n"
-                        f"Error: {e}\n\n"
-                        f"See log.txt for the full traceback."
-                    )
-                    error_dialog.setStandardButtons(QMessageBox.Ok)
-                    error_dialog.exec_()
-                except Exception:
-                    pass
-        else:
-            #Create warning message box to indicate error
-            error_dialog = QMessageBox()
-            error_dialog.setIcon(QMessageBox.Warning)
-            error_dialog.setWindowTitle("No Media Player")
-            error_dialog.setText("No media player configured!\nPlease configure a media player.")
-
-            #Set only OK button
-            error_dialog.setStandardButtons(QMessageBox.Ok)
-
-            #Show error dialog
-            error_dialog.exec_()
-
-    def choose_external_player(self):
-        #Open file dialog box in order to select media player program
-        file_dialog = QFileDialog()
-        file_dialog.setFileMode(QFileDialog.ExistingFile)
-
-        if sys.platform.startswith('win'):
-            file_dialog.setNameFilter("Executable files (*.exe *.bat, *.com)")
-        else:
-            file_dialog.setNameFilter("Executable files (*)")
-
-        file_dialog.setWindowTitle("Select External Media Player")
-
-        if file_dialog.exec_():
-            file_paths = file_dialog.selectedFiles()
-
-            if len(file_paths) > 0:
-                self.external_player_command = file_paths[0]
-
-                self.save_external_player_command()
-                self._refresh_current_player_label()
-
-                self.animate_progress(0, 100, "Selected external media player")
-
-    def use_embedded_player(self):
-        # User clicked "Use Internal Player (VLC)". Check libvlc is reachable BEFORE
-        # we persist the choice — otherwise the user gets a silent failure later
-        # when they try to play something.
-        if not EmbeddedPlayerWindow.is_available():
             error_dialog = QMessageBox(self)
             error_dialog.setIcon(QMessageBox.Warning)
-            error_dialog.setWindowTitle("Embedded player unavailable")
-            error_dialog.setText(
-                "The internal VLC player needs libvlc installed on this machine.\n\n"
-                "Install VLC from https://www.videolan.org/vlc/ and then click this button again.\n"
-                "(After installing, you may also need: pip install python-vlc)"
-            )
+            error_dialog.setWindowTitle("Invalid stream URL")
+            error_dialog.setText("Invalid stream URL.\nPlease try again.")
             error_dialog.setStandardButtons(QMessageBox.Ok)
             error_dialog.exec_()
             return
-
-        self.external_player_command = "<embedded-vlc>"
-        self.save_external_player_command()
-        self._refresh_current_player_label()
-        self.animate_progress(0, 100, "Internal VLC player enabled")
-
-    def _refresh_current_player_label(self):
-        if not hasattr(self, "current_player_label"):
-            return
-        cmd = getattr(self, "external_player_command", "") or ""
-        if cmd == "<embedded-vlc>":
-            self.current_player_label.setText("Active player: Internal VLC (embedded)")
-        elif cmd:
-            self.current_player_label.setText(f"Active player: {cmd}")
-        else:
-            self.current_player_label.setText("No player selected — choose one above.")
+        self._play_embedded(url)
 
     def _ensure_tv_root(self):
-        """Build TVRoot on first use and add it to the central stack."""
+        """Build TVRoot on first use. In V3 progressive-screens mode the
+        TVRoot is the player screen (no sliding menu — that's handled by
+        the screen stack now)."""
         if self._tv_root is not None:
             return self._tv_root
         if not TVRoot.is_available():
@@ -2785,14 +2690,16 @@ class IPTVPlayerApp(QMainWindow):
             )
             return None
         self._tv_root = TVRoot(self, user_agent=self.current_user_agent)
-        self._main_stack.addWidget(self._tv_root)  # page 1
-        # Hook the in-window next/prev buttons to the same playlist walk used
-        # by the floating embedded player.
+        # Suppress TVRoot's own hamburger / sliding menu / edge trigger
+        # PERMANENTLY in V3 — the screen stack owns navigation. (Without
+        # this, the hamburger button shows back up every time the chrome
+        # wakes and overlaps the PlayerScreen's Back button.)
+        self._tv_root.disable_internal_chrome()
         self._tv_root.connect_next_prev(self._tv_play_next, self._tv_play_prev)
         return self._tv_root
 
     def _tv_play_next(self):
-        if not hasattr(self, "_tv_playlist") or not self._tv_playlist:
+        if not getattr(self, "_tv_playlist", None):
             return
         if self._tv_idx + 1 >= len(self._tv_playlist):
             return
@@ -2800,104 +2707,472 @@ class IPTVPlayerApp(QMainWindow):
         self._tv_root.play_url(self._tv_playlist[self._tv_idx]['url'])
 
     def _tv_play_prev(self):
-        if not hasattr(self, "_tv_playlist") or not self._tv_playlist:
+        if not getattr(self, "_tv_playlist", None):
             return
         if self._tv_idx <= 0:
             return
         self._tv_idx -= 1
         self._tv_root.play_url(self._tv_playlist[self._tv_idx]['url'])
 
+    # ---------------------------------------------------------------- V3 screens
+    def _build_v3_screens(self):
+        """Lazily build the screen stack. Pre-builds all browse screens so
+        navigating between them is instantaneous (no widget reconstruction).
+        """
+        if hasattr(self, '_v3_stack') and self._v3_stack is not None:
+            return self._v3_stack
+
+        self._v3_stack = TVScreenStack(self)
+
+        # ---- Home ----
+        # Read the current theme so the dropdown reflects the persisted choice.
+        cur_theme = "System"
+        try:
+            cur_theme = self.theme_select_box.currentText() or "System"
+        except Exception:
+            pass
+        self._home_screen = HomeScreen(self, current_theme=cur_theme)
+        self._home_screen.tile_clicked.connect(self._on_home_tile)
+        self._home_screen.theme_changed.connect(self._on_home_theme_changed)
+        self._home_screen.about_clicked.connect(self._on_home_about)
+        self._home_screen.exit_clicked.connect(self.close)
+        self._v3_stack.addWidget(self._home_screen)   # index 0
+
+        # ---- Browse screens (LIVE / Movies / Series) ----
+        # Each browse screen hosts the corresponding V2 tab content.
+        # We re-parent the existing tab widgets so all the wiring (favorites,
+        # search bars, EPG, etc.) continues to work unchanged.
+        from PyQt5.QtCore import QTimer as _QTimer
+        self._browse_screens = {}
+        for stream_type, title in (('LIVE', 'Live TV'), ('Movies', 'Movies'), ('Series', 'Series')):
+            screen = BrowseScreen(title, self)
+            screen.back_clicked.connect(self._v3_back)
+            self._browse_screens[stream_type] = screen
+            self._v3_stack.addWidget(screen)
+
+        # ---- Settings / Info as their own screens ----
+        self._settings_screen = BrowseScreen("Settings", self)
+        self._settings_screen.back_clicked.connect(self._v3_back)
+        self._v3_stack.addWidget(self._settings_screen)
+
+        self._info_screen = BrowseScreen("Info", self)
+        self._info_screen.back_clicked.connect(self._v3_back)
+        self._v3_stack.addWidget(self._info_screen)
+
+        # ---- Player screen (TVRoot wrapper) ----
+        # Only created when libvlc is available.
+        self._player_screen = None
+
+        self._v3_history = []  # stack of indices for Back navigation
+
+        return self._v3_stack
+
+    def _populate_v3_browse_content(self):
+        """Build each BrowseScreen's body by composing the V2 widgets the user
+        already interacts with. Rather than reparent the whole QTabWidget page
+        (which left empty BrowseScreens in earlier attempts — Qt layout edge
+        cases on reparent-before-show), we build a fresh QHBoxLayout per
+        section using the existing category list / streaming list / info pane
+        attributes. Every signal/slot already on those widgets keeps working.
+        """
+        if getattr(self, '_v3_content_populated', False):
+            return
+
+        def _build_browse_body(stream_type, info_widget):
+            from PyQt5.QtWidgets import QSplitter
+            body = QWidget()
+            cols = QSplitter(Qt.Horizontal, body)
+            cols.setChildrenCollapsible(False)
+
+            cat_col = QWidget()
+            cat_lay = QVBoxLayout(cat_col)
+            cat_lay.setContentsMargins(0, 0, 0, 0)
+            cat_lay.setSpacing(6)
+            cat_lay.addWidget(self.category_search_bars[stream_type])
+            cat_lay.addWidget(self.category_list_widgets[stream_type])
+
+            stream_col = QWidget()
+            stream_lay = QVBoxLayout(stream_col)
+            stream_lay.setContentsMargins(0, 0, 0, 0)
+            stream_lay.setSpacing(6)
+            stream_lay.addWidget(self.streaming_search_bars[stream_type])
+            stream_lay.addWidget(self.streaming_list_widgets[stream_type])
+
+            cols.addWidget(cat_col)
+            cols.addWidget(stream_col)
+            cols.addWidget(info_widget)
+            cols.setStretchFactor(0, 1)
+            cols.setStretchFactor(1, 2)
+            cols.setStretchFactor(2, 2)
+            cols.setSizes([220, 420, 420])
+
+            outer = QVBoxLayout(body)
+            outer.setContentsMargins(0, 0, 0, 0)
+            outer.addWidget(cols)
+            return body
+
+        self._browse_screens['LIVE'].set_content(
+            _build_browse_body('LIVE', self.live_info_box)
+        )
+        self._browse_screens['Movies'].set_content(
+            _build_browse_body('Movies', self.movies_info_box)
+        )
+        self._browse_screens['Series'].set_content(
+            _build_browse_body('Series', self.series_info_box)
+        )
+        self._info_screen.set_content(self._build_links_content())
+
+        # The Settings tab is a QWidget hosting self.settings_layout — re-parent
+        # the whole thing into the settings screen.
+        settings_host = self.tab_widget.widget(4)
+        if settings_host is not None:
+            self._settings_screen.set_content(settings_host)
+
+        # Strip the V2 widgets that don't belong in V3:
+        # - Choose Media Player / Use Internal Player / current player label
+        #   (V3 always plays via the internal libvlc backend)
+        # - TV-mode checkbox (V3 IS the TV mode — no toggle needed)
+        # - Theme selector (moved to the Home screen's Theme button)
+        for attr in ('choose_player_button', 'use_embedded_player_button',
+                     'current_player_label', 'tv_mode_checkbox', 'theme_select_box',
+                     'address_book_button'):
+            w = getattr(self, attr, None)
+            if w is not None:
+                try:
+                    w.hide()
+                except RuntimeError:
+                    pass
+        # The "Theme:" label is added inline (no attribute), so walk the
+        # settings grid layout to find and hide it. It sits at row 11.
+        try:
+            for col in (0, 1):
+                it = self.settings_layout.itemAtPosition(11, col)
+                if it is not None and it.widget() is not None:
+                    it.widget().hide()
+        except Exception:
+            pass
+
+        self._v3_content_populated = True
+
+    def _build_links_content(self):
+        """Compose the Links screen body: a list of saved IPTV accounts on
+        top, an Add/Edit/Delete/Use button bar, a default-startup-account
+        picker, and the current account's server-info pane below.
+        """
+        from PyQt5.QtWidgets import QListWidget as _QListWidget
+        body = QWidget()
+        outer = QVBoxLayout(body)
+        outer.setContentsMargins(8, 8, 8, 8)
+        outer.setSpacing(10)
+
+        header = QLabel("Saved IPTV accounts")
+        header.setStyleSheet("font-size: 16px; font-weight: 500;")
+        outer.addWidget(header)
+
+        self._links_list = _QListWidget()
+        self._links_list.setMinimumHeight(140)
+        outer.addWidget(self._links_list, 1)
+
+        btn_row = QHBoxLayout()
+        btn_use  = QPushButton("Use account")
+        btn_add  = QPushButton("Add…")
+        btn_edit = QPushButton("Edit…")
+        btn_del  = QPushButton("Delete")
+        for b in (btn_use, btn_add, btn_edit, btn_del):
+            b.setCursor(Qt.PointingHandCursor)
+            btn_row.addWidget(b)
+        btn_row.addStretch(1)
+        outer.addLayout(btn_row)
+
+        btn_use.clicked.connect(self._links_use_selected)
+        btn_add.clicked.connect(self._links_add)
+        btn_edit.clicked.connect(self._links_edit_selected)
+        btn_del.clicked.connect(self._links_delete_selected)
+        self._links_list.itemDoubleClicked.connect(lambda _: self._links_use_selected())
+
+        # Default startup account picker — moved here from inside the Add
+        # dialog (where it doesn't belong UX-wise).
+        startup_row = QHBoxLayout()
+        startup_row.addWidget(QLabel("Default account:"))
+        self._links_startup_combo = QComboBox()
+        self._links_startup_combo.setMinimumWidth(220)
+        startup_row.addWidget(self._links_startup_combo)
+        startup_row.addStretch(1)
+        outer.addLayout(startup_row)
+        self._links_startup_combo.currentTextChanged.connect(self._links_set_default_account)
+
+        info_header = QLabel("Current account — server info")
+        info_header.setStyleSheet("font-size: 14px; font-weight: 500; margin-top: 8px;")
+        outer.addWidget(info_header)
+        outer.addWidget(self.iptv_info_text, 1)
+
+        # Initial population.
+        self._refresh_links_list()
+        return body
+
+    def _links_set_default_account(self, name):
+        if getattr(self, '_links_startup_combo_block', False):
+            return
+        config = configparser.ConfigParser()
+        try:
+            config.read(self.user_data_file)
+        except (configparser.Error, UnicodeDecodeError):
+            config = configparser.ConfigParser()
+        config['Startup credentials'] = {'startup_credentials': name or 'None'}
+        try:
+            with open(self.user_data_file, 'w') as fp:
+                config.write(fp)
+        except OSError:
+            pass
+
+    def _refresh_links_list(self):
+        if not hasattr(self, '_links_list'):
+            return
+        self._links_list.clear()
+        config = configparser.ConfigParser()
+        try:
+            config.read(self.user_data_file)
+        except (configparser.Error, UnicodeDecodeError):
+            return
+        names = []
+        if 'Credentials' in config:
+            for name in config['Credentials']:
+                self._links_list.addItem(name)
+                names.append(name)
+        # Refresh the default-account combo as well, preserving the
+        # currently-saved choice.
+        if hasattr(self, '_links_startup_combo'):
+            self._links_startup_combo_block = True
+            self._links_startup_combo.clear()
+            self._links_startup_combo.addItem("None")
+            for n in names:
+                self._links_startup_combo.addItem(n)
+            current = "None"
+            if config.has_option('Startup credentials', 'startup_credentials'):
+                current = config['Startup credentials']['startup_credentials'] or "None"
+            idx = self._links_startup_combo.findText(current)
+            if idx >= 0:
+                self._links_startup_combo.setCurrentIndex(idx)
+            self._links_startup_combo_block = False
+
+    def _links_selected_name(self):
+        it = self._links_list.currentItem() if hasattr(self, '_links_list') else None
+        return it.text() if it is not None else None
+
+    def _links_use_selected(self):
+        name = self._links_selected_name()
+        if not name:
+            return
+        config = configparser.ConfigParser()
+        try:
+            config.read(self.user_data_file)
+        except (configparser.Error, UnicodeDecodeError):
+            return
+        if 'Credentials' not in config or name not in config['Credentials']:
+            return
+        data = config['Credentials'][name]
+        parts = data.split('|')
+        if data.startswith('manual|') and len(parts) >= 7:
+            _, server, username, password, live_fmt, movie_fmt, series_fmt = parts[:7]
+            self.server = server; self.username = username; self.password = password
+            self.live_url_format = live_fmt; self.movie_url_format = movie_fmt; self.series_url_format = series_fmt
+            self.login()
+        elif data.startswith('m3u_plus|') and len(parts) >= 5:
+            _, m3u_url, live_fmt, movie_fmt, series_fmt = parts[:5]
+            self.live_url_format = live_fmt; self.movie_url_format = movie_fmt; self.series_url_format = series_fmt
+            if self.extract_credentials_from_m3u_plus_url(m3u_url):
+                self.login()
+
+    def _links_add(self):
+        # Open the Add form DIRECTLY — not the full AccountManager (which
+        # would also show the Select/Edit/Delete list the user already has
+        # on the Links screen). We use a transient AccountManager instance
+        # so AccountDialog finds the parent.parent.default_url_formats it
+        # needs, but never call .exec_() on the manager itself.
+        from accounts import AccountManager
+        mgr = AccountManager(self)
+        mgr.add_account()
+        mgr.deleteLater()
+        self._refresh_links_list()
+
+    def _links_edit_selected(self):
+        name = self._links_selected_name()
+        if not name:
+            return
+        from accounts import AccountManager
+        mgr = AccountManager(self)
+        # Programmatically select the row so AccountManager.edit_account picks it up.
+        items = mgr.accounts_list.findItems(name, Qt.MatchExactly)
+        if items:
+            mgr.accounts_list.setCurrentItem(items[0])
+        mgr.edit_account()
+        mgr.deleteLater()
+        self._refresh_links_list()
+
+    def _links_delete_selected(self):
+        name = self._links_selected_name()
+        if not name:
+            return
+        if QMessageBox.question(self, "Delete account",
+                                f"Delete '{name}'?",
+                                QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
+            return
+        config = configparser.ConfigParser()
+        try:
+            config.read(self.user_data_file)
+        except (configparser.Error, UnicodeDecodeError):
+            return
+        if 'Credentials' in config and name in config['Credentials']:
+            del config['Credentials'][name]
+            try:
+                with open(self.user_data_file, 'w') as fp:
+                    config.write(fp)
+            except OSError:
+                pass
+        self._refresh_links_list()
+
+    def _on_home_theme_changed(self, theme_name):
+        # The Home Theme chip is the only theme switcher in V1, so it calls
+        # straight through to the persistence + apply path.
+        self.themeChanged(theme_name)
+
+    def _on_home_about(self):
+        QMessageBox.information(
+            self, "About Nebula IPTV",
+            f"<h3>Nebula IPTV Desktop</h3>"
+            f"<p>Version {CURRENT_VERSION}</p>"
+            f"<p>PyQt5 IPTV player with libvlc decode backend and a "
+            f"TV-mode progressive-screens UX.</p>"
+            f"<p>Based on V2 of "
+            f"<a href=\"https://github.com/Youri666/Xtream-m3u_plus-IPTV-Player\">"
+            f"Xtream-m3u_plus-IPTV-Player</a>.</p>"
+            f"<p>Internal decode: libvlc / python-vlc. "
+            f"Same compatibility as desktop VLC.</p>"
+        )
+
+    def _on_home_tile(self, name):
+        if name in self._browse_screens:
+            target = self._browse_screens[name]
+            # Remember which section the user is currently browsing. This is
+            # what the player's playlist popup and Next/Prev should walk —
+            # NOT whatever tab the (hidden) QTabWidget last had selected.
+            self._v3_current_section = name
+        elif name == 'Settings':
+            target = self._settings_screen
+        elif name == 'Info':
+            target = self._info_screen
+        else:
+            return
+        idx = self._v3_stack.indexOf(target)
+        if idx < 0:
+            return
+        self._v3_history.append(self._v3_stack.currentIndex())
+        self._v3_animate_to(idx, direction='left')
+
+    def _v3_back(self):
+        if not self._v3_history:
+            return
+        prev = self._v3_history.pop()
+        self._v3_animate_to(prev, direction='right')
+
+    def _v3_animate_to(self, target_idx, direction='left'):
+        # First-pass: just switch pages with no animation. The previous slide
+        # implementation fought with QStackedWidget's auto-hide and ended up
+        # showing blank pages. We'll re-introduce animation in a follow-up
+        # once the navigation itself is verified working.
+        if target_idx == self._v3_stack.currentIndex():
+            return
+        self._v3_stack.setCurrentIndex(target_idx)
+
     def _enter_tv_view(self):
-        # Re-parent the V2 tab widget into the sliding menu — the user still
-        # gets the familiar LIVE/Movies/Series UI, just inside the translucent
-        # overlay instead of filling the window.
-        tv = self._ensure_tv_root()
-        if tv is None:
-            return False
-        tv.set_menu_content(self.tab_widget)
-        self._main_stack.setCurrentIndex(1)
+        """Switch the central widget to the V3 progressive-screens stack.
+
+        Before swapping, rescue widgets owned by the old central widget that
+        we still touch from worker callbacks (progress_bar, tab_widget) by
+        re-parenting them to `self`. Otherwise Qt deletes them with the old
+        central widget and every subsequent setFormat / setValue crashes.
+        """
+        self._build_v3_screens()
+        self._populate_v3_browse_content()
+        if self.centralWidget() is not self._v3_stack:
+            # Rescue widgets that survive across the swap.
+            try:
+                self.progress_bar.setParent(self)
+                self.progress_bar.hide()
+            except RuntimeError:
+                pass
+            try:
+                self.tab_widget.setParent(self)
+                self.tab_widget.hide()
+            except RuntimeError:
+                pass
+            self.setCentralWidget(self._v3_stack)
+        self._v3_stack.setCurrentIndex(0)
         return True
 
     def _exit_tv_view(self):
-        # Move the tab widget back to the classic layout. The classic layout's
-        # QVBoxLayout still has a slot for it (we added progress_bar after).
-        classic = self._main_stack.widget(0)
-        layout = classic.layout()
-        layout.insertWidget(0, self.tab_widget)  # re-insert at top
-        self._main_stack.setCurrentIndex(0)
+        # Not used in V3 (TV mode is the only mode for now), but kept as a
+        # stub so existing callers don't crash. Reverting requires moving the
+        # tab pages back into the QTabWidget; we can implement that if needed.
+        pass
 
     def _toggle_tv_view(self):
-        """Ctrl+T flips between classic tabs and TV view."""
-        if self._main_stack.currentIndex() == 0:
-            self._enter_tv_view()
-        else:
-            self._exit_tv_view()
+        """Ctrl+T re-enters TV view (no toggle to classic in V3 — TV is the app)."""
+        self._enter_tv_view()
 
     def _play_embedded(self, url):
-        # V3 TV mode: if the user has TV view turned on, play into the in-window
-        # video frame and flip the stack to it. _enter_tv_view re-parents the
-        # tab widget into the sliding menu the first time it runs; subsequent
-        # calls are idempotent.
-        if getattr(self, '_tv_mode_default', False):
-            if self._main_stack.currentIndex() != 1:
-                if not self._enter_tv_view():
-                    # libvlc unavailable — fall through to the V2 floating-window path.
-                    pass
-            if self._main_stack.currentIndex() == 1 and self._tv_root is not None:
-                # Capture the visible playlist so the in-window ⏮ / ⏭ walk it.
-                playlist, current_idx, _title = self._collect_visible_playlist(url)
-                self._tv_playlist = playlist
-                self._tv_idx = current_idx
-                self._tv_root.play_url(url)
-                # Slide the menu away so the user actually sees the channel
-                # they just clicked. Defer slightly so the click animation
-                # completes before the slide starts.
-                from PyQt5.QtCore import QTimer
-                if self._tv_root.menu.is_open():
-                    QTimer.singleShot(250, self._tv_root.close_menu)
-                self.animate_progress(0, 100, "Playing in TV view")
-                return
-
-        # Lazily create the embedded VLC window — keeping a single instance lets
-        # the user switch channels without rebuilding the libvlc context each time.
-        if not hasattr(self, "_embedded_player_window") or self._embedded_player_window is None:
-            try:
-                self._embedded_player_window = EmbeddedPlayerWindow(self, user_agent=self.current_user_agent)
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                error_dialog = QMessageBox(self)
-                error_dialog.setIcon(QMessageBox.Critical)
-                error_dialog.setWindowTitle("Embedded player error")
-                error_dialog.setText(
-                    f"Could not start the internal VLC player:\n{e}\n\n"
-                    "Install VLC from https://www.videolan.org/vlc/ and try again."
-                )
-                error_dialog.exec_()
-                return
-
-        try:
+        # Nebula V1 is V3-only — always route playback through the in-window
+        # PlayerScreen. The legacy V2 floating EmbeddedPlayerWindow below is
+        # only reached if libvlc fails to load.
+        tv = self._ensure_tv_root()
+        if tv is not None:
+            if self._player_screen is None:
+                self._player_screen = PlayerScreen(self)
+                self._player_screen.back_clicked.connect(self._on_player_back)
+                self._player_screen.set_video(tv)
+                self._v3_stack.addWidget(self._player_screen)
             playlist, current_idx, title = self._collect_visible_playlist(url)
-            self._embedded_player_window.play_url(
-                url, title=title, playlist=playlist, index=current_idx,
-            )
-            self.animate_progress(0, 100, "Playing in internal player")
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            self.animate_progress(0, 100, "Failed playing stream")
-            print(f"Embedded play failed [{url}]: {e}")
+            section = getattr(self, '_v3_current_section', None) or ''
+            # Dead-end media (movies): collapse playlist to a single item so
+            # the player chrome doesn't show useless ⏮ / ⏭ buttons.
+            if section == 'Movies':
+                if 0 <= current_idx < len(playlist):
+                    playlist = [playlist[current_idx]]
+                else:
+                    playlist = [{'name': title or url, 'url': url}]
+                current_idx = 0
+            self._tv_playlist = playlist
+            self._tv_idx = current_idx
+            tv.set_navigable(len(playlist) > 1)
+            tv.set_playlist(playlist, current_idx)
+            tv.play_url(url, title=title)
+            target_idx = self._v3_stack.indexOf(self._player_screen)
+            self._v3_history.append(self._v3_stack.currentIndex())
+            self._v3_animate_to(target_idx, direction='left')
+            return
+
+    def _on_player_back(self):
+        # Always drop out of fullscreen first — otherwise the user lands on the
+        # home screen with no native window decorations and can't quit.
+        if self.isFullScreen():
+            self.showNormal()
+        if getattr(self, '_tv_root', None) is not None:
+            try:
+                self._tv_root.stop()
+            except Exception:
+                pass
+        self._v3_back()
 
     def _collect_visible_playlist(self, url):
         # Build the player's sidebar list from what's CURRENTLY VISIBLE in the main
-        # window — i.e. iterate the actual QListWidget the user just clicked from,
-        # not the cached `currently_loaded_streams` array. For Series in episode
-        # mode (navigation level 2) that means the list shows episodes of the open
-        # season; for movies it's the open category; for LIVE it's the open category.
+        # window. The V3 progressive-screen mode replaces tab navigation, so the
+        # source of truth is `_v3_current_section` (set when the user tiles into
+        # LIVE / Movies / Series), NOT `tab_widget.currentIndex()` which stays
+        # at whatever the QTabWidget last had selected (it's hidden in V3).
         try:
-            current_tab_idx = self.tab_widget.currentIndex()
-            tab_name = self.tab_widget.tabText(current_tab_idx)
-            stream_type = {'LIVE': 'LIVE', 'Movies': 'Movies', 'Series': 'Series'}.get(tab_name, 'LIVE')
+            stream_type = getattr(self, '_v3_current_section', None) or 'LIVE'
+            if stream_type not in ('LIVE', 'Movies', 'Series'):
+                stream_type = 'LIVE'
 
             list_widget = self.streaming_list_widgets.get(stream_type)
             playlist = []
@@ -3106,51 +3381,6 @@ class IPTVPlayerApp(QMainWindow):
             self.set_progress_bar(100, f"Loaded search results")
         except Exception as e:
             print(f"search in list failed: {e}")
-
-    def load_external_player_command(self):
-        config = configparser.ConfigParser()
-        try:
-            config.read(self.user_data_file)
-        except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
-
-        if config.has_option('ExternalPlayer', 'Command'):
-            return config['ExternalPlayer'].get('Command', '')
-
-        # First-run default: prefer the internal libvlc-backed player when it's
-        # actually usable on this machine. If libvlc isn't present we leave the
-        # command empty so the user is nudged toward "Choose Media Player".
-        try:
-            if EmbeddedPlayerWindow.is_available():
-                default_cmd = "<embedded-vlc>"
-                # Persist the choice so the user can see "Active player: Internal VLC"
-                # in Settings without having to click anything.
-                config['ExternalPlayer'] = {'Command': default_cmd}
-                try:
-                    with open(self.user_data_file, 'w') as config_file:
-                        config.write(config_file)
-                except OSError:
-                    pass
-                return default_cmd
-        except Exception:
-            pass
-
-        return ""
-
-    def save_external_player_command(self):
-        config = configparser.ConfigParser()
-        try:
-            config.read(self.user_data_file)
-        except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
-
-        config['ExternalPlayer'] = {'Command': self.external_player_command}
-
-        try:
-            with open(self.user_data_file, 'w') as config_file:
-                config.write(config_file)
-        except OSError as e:
-            print(f"Could not write user data file: {e}")
 
     def open_address_book(self):
         dialog = AccountManager(self)

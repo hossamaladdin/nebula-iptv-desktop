@@ -342,6 +342,13 @@ class FetchDataWorker(QRunnable):
             #Make streaming URL in each entry except for the series
             for tab_name in entries_per_stream_type.keys():
                 for idx, entry in enumerate(entries_per_stream_type[tab_name]):
+                    # Some IPTV providers ship VOD entries with an empty / None
+                    # name field; those would render as blank rows in the list.
+                    # Substitute a placeholder so the user knows the row is real
+                    # but unnamed (rather than wondering why their list has gaps).
+                    if not entry.get('name'):
+                        entry['name'] = entry.get('title') or "(untitled)"
+
                     #Get stream type. If no stream_type is found it is series
                     stream_type         = entry.get('stream_type', 'series')
                     stream_id           = entry.get("stream_id", -1)
