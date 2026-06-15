@@ -2,7 +2,17 @@
 
 PyQt5 IPTV player with a **libvlc** decode backend and an opt-in **TV-mode UX** — the video fills the window as the background, and the channel browser slides in as a translucent overlay.
 
-Forked from [V2 of Xtream-m3u_plus-IPTV-Player](https://github.com/Youri666/Xtream-m3u_plus-IPTV-Player). Private working repo for the V3 redesign. See [`PLAN.md`](PLAN.md) for the architectural plan.
+Forked from [V2 of Xtream-m3u_plus-IPTV-Player](https://github.com/Youri666/Xtream-m3u_plus-IPTV-Player). Working repo for the V3 redesign. See [`PLAN.md`](PLAN.md) for the architectural plan.
+
+## Screenshots
+
+| Home | Live TV |
+|---|---|
+| ![Home screen](screenshots/01-home.png) | ![Live TV browser](screenshots/02-live-tv.png) |
+
+| TV mode — playback | TV mode — sliding playlist |
+|---|---|
+| ![TV-mode playback](screenshots/03-tv-mode-playback.png) | ![TV-mode with sliding playlist over live video](screenshots/04-tv-mode-playlist.png) |
 
 ## Status
 
@@ -19,7 +29,7 @@ Everything that was in V2 (internal player, bug fixes, theme switcher, Arabic / 
 
 ```bash
 pip install -r requirements.txt   # PyQt5, requests, lxml, python-dateutil, python-vlc (optional)
-python "IPTV M3U_Plus PLAYER by MY-1.py"
+python nebula_iptv.py
 ```
 
 TV mode requires **libvlc** to be installed (the system VLC media player ships it). Without libvlc, classic V2 mode is used.
