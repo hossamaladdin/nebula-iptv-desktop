@@ -205,7 +205,7 @@ class AccountManager(QtWidgets.QDialog):
                 data = config['Credentials'][name]
 
                 if data.startswith('manual|'):
-                    _, server, username, password, live_url_format, movie_url_format, series_url_format = data.split('|')
+                    _, server, username, password, live_url_format, movie_url_format, series_url_format = data.split('|', 6)
                     
                     self.parent.server            = server
                     self.parent.username          = username
@@ -464,6 +464,59 @@ class AccountDialog(QtWidgets.QDialog):
             server      = self.server_entry.text().strip()
             username    = self.username_entry.text().strip()
             password    = self.password_entry.text().strip()
+
+            # Try to auto-parse whatever was pasted into any field.
+            # Handles three common formats providers send:
+            #   1. get.php URL:  http://host/get.php?username=X&password=Y&type=m3u_plus
+            #   2. Credential block (any field, any separator):
+            #         User : X   /   Username : X
+            #         Password : Y
+            #         Host : Z   /   URL : Z   /   Server : Z
+            raw_paste = server or username or password
+            parsed_server = parsed_user = parsed_pass = None
+
+            import re as _re
+            from urllib.parse import urlparse as _up, parse_qs as _pq
+
+            # Format 1 — get.php URL in any field
+            get_php_src = next((f for f in (server, username, password) if f and 'get.php' in f), None)
+            if get_php_src:
+                _parsed = _up(get_php_src)
+                _qs = _pq(_parsed.query)
+                _u = (_qs.get('username') or [None])[0]
+                _p = (_qs.get('password') or [None])[0]
+                if _u and _p:
+                    parsed_server = f"{_parsed.scheme}://{_parsed.netloc}"
+                    parsed_user   = _u
+                    parsed_pass   = _p
+
+            # Format 2 — multi-line credential block pasted into any field
+            if not parsed_server:
+                block = "\n".join(f for f in (server, username, password) if f)
+                _u = _re.search(r'(?:user(?:name)?)\s*[:\-=]\s*(\S+)', block, _re.I)
+                _p = _re.search(r'pass(?:word)?\s*[:\-=]\s*(\S+)', block, _re.I)
+                _h = _re.search(r'(?:host|url|server)\s*[:\-=]\s*(\S+)', block, _re.I)
+                if _u and _p and _h:
+                    host = _h.group(1).strip().rstrip('/')
+                    if not host.startswith(('http://', 'https://')):
+                        host = 'http://' + host
+                    parsed_server = host
+                    parsed_user   = _u.group(1).strip()
+                    parsed_pass   = _p.group(1).strip()
+
+            if parsed_server:
+                server   = parsed_server
+                username = parsed_user
+                password = parsed_pass
+                self.server_entry.setText(server)
+                self.username_entry.setText(username)
+                self.password_entry.setText(password)
+
+            # Normalise server: add http:// if the user typed a bare hostname
+            if server and not server.startswith(('http://', 'https://')):
+                server = 'http://' + server
+                self.server_entry.setText(server)
+
             if not name or not server or not username or not password:
                 QtWidgets.QMessageBox.warning(self, "Missing fields",
                     "Please fill in name, server URL, username and password.")
