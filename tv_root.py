@@ -10,6 +10,7 @@ layout still works for users who want the legacy look.
 """
 
 import sys
+import os
 
 from PyQt5.QtCore import Qt, QSize, QEvent, QPropertyAnimation, QEasingCurve, pyqtSignal, QTimer
 from PyQt5.QtGui import QPalette, QColor, QCursor
@@ -18,6 +19,58 @@ from PyQt5.QtWidgets import (
     QPushButton, QGraphicsOpacityEffect, QSlider, QApplication, QMenu, QAction,
     QFileDialog, QMessageBox, QScrollArea,
 )
+
+
+def _setup_vlc_env():
+    """Pre-load libvlc (and libvlccore on macOS) from the standard install
+    location so python-vlc can find them inside a PyInstaller bundle.
+
+    DO NOT use PYTHON_VLC_LIB_PATH: python-vlc's env-var fast-path skips the
+    libvlccore pre-load, causing ctypes to fail with 'Cannot load lib' and
+    calling sys.exit(1). Pre-loading via ctypes directly keeps the libraries
+    in ctypes' internal cache so python-vlc's normal discovery reuses them.
+    """
+    import ctypes
+
+    if sys.platform == "darwin":
+        base    = "/Applications/VLC.app/Contents/MacOS"
+        core    = os.path.join(base, "lib", "libvlccore.dylib")
+        lib     = os.path.join(base, "lib", "libvlc.dylib")
+        plugins = os.path.join(base, "plugins")
+        if not os.path.isfile(lib):
+            return
+        try:
+            if os.path.isfile(core):
+                ctypes.CDLL(core)   # must be loaded before libvlc
+            ctypes.CDLL(lib)
+        except OSError:
+            return
+        if os.path.isdir(plugins):
+            os.environ.setdefault("VLC_PLUGIN_PATH", plugins)
+
+    elif sys.platform.startswith("win"):
+        import ctypes.util
+        pf   = os.environ.get("ProgramFiles",       r"C:\Program Files")
+        pf86 = os.environ.get("ProgramFiles(x86)",  r"C:\Program Files (x86)")
+        for root in (pf, pf86):
+            lib = os.path.join(root, "VideoLAN", "VLC", "libvlc.dll")
+            if os.path.isfile(lib):
+                plugins = os.path.join(os.path.dirname(lib), "plugins")
+                # Add VLC dir to DLL search path so Windows finds its deps
+                if hasattr(os, "add_dll_directory"):
+                    os.add_dll_directory(os.path.dirname(lib))
+                try:
+                    ctypes.CDLL(lib)
+                except OSError:
+                    pass
+                if os.path.isdir(plugins):
+                    os.environ.setdefault("VLC_PLUGIN_PATH", plugins)
+                break
+
+    # Linux: libvlc.so is in the system library path via ldconfig — no action needed
+
+
+_setup_vlc_env()
 
 
 _SLIDING_MENU_STYLE = """
@@ -309,7 +362,14 @@ class TVRoot(QWidget):
 
         import vlc
         self._vlc = vlc
-        vlc_args = ["--quiet"]
+        vlc_args = [
+            "--quiet",
+            # Reduce initial buffering delay for live/network streams
+            "--network-caching=1500",
+            "--live-caching=1000",
+            # Let VLC pick the best available HW decoder (VideoToolbox / DXVA2 / VA-API)
+            "--avcodec-hw=any",
+        ]
         ua = (user_agent or "").strip()
         if ua:
             vlc_args.append(f"--http-user-agent={ua}")

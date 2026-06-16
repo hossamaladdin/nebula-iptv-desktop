@@ -66,11 +66,18 @@ class IPTVPlayerApp(QMainWindow):
         ]
         self.current_user_agent = ""
 
-        self.user_data_file = "userdata.ini"
-        self.favorites_file = "favorites.json"
-        self.recents_file   = "recents.json"   # recently-watched history, per section
+        if sys.platform == "darwin":
+            _app_support = path.join(path.expanduser("~"), "Library", "Application Support", "NebulaIPTV")
+        elif sys.platform.startswith("win"):
+            _app_support = path.join(os.environ.get("APPDATA", path.expanduser("~")), "NebulaIPTV")
+        else:  # Linux / other Unix
+            _app_support = path.join(os.environ.get("XDG_CONFIG_HOME", path.join(path.expanduser("~"), ".config")), "NebulaIPTV")
+        os.makedirs(_app_support, exist_ok=True)
+        self.user_data_file = path.join(_app_support, "userdata.ini")
+        self.favorites_file = path.join(_app_support, "favorites.json")
+        self.recents_file   = path.join(_app_support, "recents.json")
         self.recents_cap    = 50               # keep at most this many per section
-        self.cache_file     = "all_cached_data.json"
+        self.cache_file     = path.join(_app_support, "all_cached_data.json")
         # Default values for URL formats
         self.default_url_formats = {
             'live': "{server}/live/{username}/{password}/{stream_id}.{container_extension}",
