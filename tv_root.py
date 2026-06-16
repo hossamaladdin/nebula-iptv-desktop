@@ -345,6 +345,13 @@ class TVRoot(QWidget):
         self._on_overlay_event = on_overlay_event
         self._overlay_widgets = []  # filled by add_overlay()
 
+        # Optional callback the host wires in V3 so an *external* chrome widget
+        # (the PlayerScreen's floating Back button, which TVRoot doesn't own)
+        # shows/hides in lock-step with the controls overlay. Without this the
+        # Back button stayed permanently visible while the rest of the chrome
+        # auto-hid, in both normal and fullscreen views.
+        self._chrome_sync = None
+
         # Whether TVRoot draws its own hamburger / sliding menu / edge trigger.
         # In V3 (progressive-screens mode) the menu and back nav are owned by
         # the screen stack at the app level, so we suppress these to avoid the
@@ -1064,6 +1071,19 @@ class TVRoot(QWidget):
         self.btn_prev.setEnabled(True)
 
     # ------------------------------------------------------------- chrome
+    def set_chrome_sync(self, callback):
+        """Register a `callback(visible: bool)` invoked whenever the controls
+        overlay wakes or auto-hides. V3 uses it to keep the PlayerScreen's
+        floating Back button in sync with the rest of the chrome."""
+        self._chrome_sync = callback
+
+    def _notify_chrome(self, visible):
+        if self._chrome_sync:
+            try:
+                self._chrome_sync(visible)
+            except Exception:
+                pass
+
     def disable_internal_chrome(self):
         """Suppress the hamburger / sliding menu / edge trigger forever.
         Used by V3 where the app's screen stack owns navigation."""
@@ -1079,6 +1099,7 @@ class TVRoot(QWidget):
         self.controls.show()
         if self._show_internal_chrome:
             self.hamburger.show()
+        self._notify_chrome(True)
         self.video_frame.unsetCursor()
         if self.player.is_playing():
             self._hide_timer.start(3000)
@@ -1093,6 +1114,7 @@ class TVRoot(QWidget):
         self.controls.hide()
         if self._show_internal_chrome:
             self.hamburger.hide()
+        self._notify_chrome(False)
         self.video_frame.setCursor(Qt.BlankCursor)
 
     def _poll_state(self):

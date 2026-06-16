@@ -68,6 +68,8 @@ class IPTVPlayerApp(QMainWindow):
 
         self.user_data_file = "userdata.ini"
         self.favorites_file = "favorites.json"
+        self.recents_file   = "recents.json"   # recently-watched history, per section
+        self.recents_cap    = 50               # keep at most this many per section
         self.cache_file     = "all_cached_data.json"
         # Default values for URL formats
         self.default_url_formats = {
@@ -113,6 +115,7 @@ class IPTVPlayerApp(QMainWindow):
         self.default_font_size      = 10
         self.go_back_text           = " Go back"
         self.all_categories_text    = "All"
+        self.recent_categories_text = "Recently watched"
         self.fav_categories_text    = "Favorites"
 
         #navigation level indicates in what list level we are
@@ -133,6 +136,16 @@ class IPTVPlayerApp(QMainWindow):
             'LIVE': 0,
             'Movies': 0,
             'Series': 0
+        }
+        # Which synthetic/normal category the user is currently viewing per
+        # section: 'all' | 'recent' | 'fav' | 'category'. Used so a double-click
+        # in the "Recently watched" view plays the stored item directly (recent
+        # entries — esp. series episodes — don't carry the stream_type the normal
+        # double-click routing relies on).
+        self.category_view_mode = {
+            'LIVE': 'all',
+            'Movies': 'all',
+            'Series': 'all'
         }
         self.prev_clicked_streaming_item        = 0
         self.prev_double_clicked_streaming_item = 0
@@ -654,10 +667,10 @@ class IPTVPlayerApp(QMainWindow):
         #Enable or disable sorting
         list_widget.setSortingEnabled(sorting_enabled)
 
-        #Remove 'All' and 'Favorites' category items
+        #Remove the synthetic 'All' / 'Recently watched' / 'Favorites' items
         if list_content_type == 'category':
             matches = []
-            for text in [self.all_categories_text, self.fav_categories_text]:
+            for text in [self.all_categories_text, self.recent_categories_text, self.fav_categories_text]:
                 matches.extend(list_widget.findItems(text, Qt.MatchExactly))
 
             for item in matches:
@@ -692,16 +705,22 @@ class IPTVPlayerApp(QMainWindow):
         list_widget.setSortingEnabled(False)
 
         if list_content_type == 'category':
-            #Add 'All' and 'Favorites' categories to top
-            itemAll = QListWidgetItem(self.all_categories_text)
-            itemAll.setData(Qt.UserRole, {'category_name': self.all_categories_text})
-            self.category_list_widgets[stream_type].insertItem(0, itemAll)
-
-            itemFav = QListWidgetItem(self.fav_categories_text)
-            itemFav.setData(Qt.UserRole, {'category_name': self.fav_categories_text})
-            self.category_list_widgets[stream_type].insertItem(1, itemFav)
+            #Add synthetic categories pinned to the top
+            self._insert_pseudo_categories(stream_type)
 
         self.animate_progress(0, 100, f"Finished sorting {stream_type} {list_content_type}")
+
+    def _insert_pseudo_categories(self, stream_type):
+        """Pin the synthetic categories to the top of a section's category list,
+        in order: All, Recently watched, Favorites. Used by both the sorter and
+        the category-search filter so the two stay in lock-step."""
+        lw = self.category_list_widgets[stream_type]
+        for i, text in enumerate([self.all_categories_text,
+                                   self.recent_categories_text,
+                                   self.fav_categories_text]):
+            item = QListWidgetItem(text)
+            item.setData(Qt.UserRole, {'category_name': text})
+            lw.insertItem(i, item)
 
     def initIPTVinfo(self):
         self.iptv_info_text = QTextEdit()
@@ -2160,6 +2179,47 @@ class IPTVPlayerApp(QMainWindow):
         by_id = {e.get(id_field): e for e in entries}
         return [by_id[i] for i in ordered_ids if i in by_id]
 
+    # ----------------------------------------------------------- recently watched
+    def _load_recents(self):
+        if path.isfile(self.recents_file):
+            try:
+                with open(self.recents_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+            except (OSError, ValueError) as e:
+                print(f"Could not read recents file, starting fresh: {e}")
+        return {}
+
+    def _recent_key(self, entry):
+        # Stable identity for de-duplication: the playable URL is unique per
+        # stream; fall back to an id/name if a stored entry predates the url.
+        return (entry.get('url') or entry.get('stream_id') or
+                entry.get('series_id') or entry.get('id') or entry.get('name'))
+
+    def _add_to_recents(self, stream_type, entry):
+        """Record a just-played item at the top of its section's history,
+        de-duplicated and capped. Stores the full entry dict so the Recently
+        Watched view can replay it without re-resolving the catalog (important
+        for series episodes, which aren't in entries_per_stream_type)."""
+        if not entry or stream_type not in ('LIVE', 'Movies', 'Series'):
+            return
+        try:
+            data = self._load_recents()
+            lst = data.get(stream_type) or []
+            key = self._recent_key(entry)
+            lst = [e for e in lst if self._recent_key(e) != key]
+            lst.insert(0, entry)
+            data[stream_type] = lst[:self.recents_cap]
+            with open(self.recents_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4)
+        except Exception as e:
+            print(f"Failed updating recents: {e}")
+
+    def _recents_in_user_order(self, stream_type):
+        # Most-recently-watched first, exactly as stored.
+        return list(self._load_recents().get(stream_type) or [])
+
     def category_item_clicked(self, clicked_item):
         try:
             sender = self.sender()
@@ -2186,8 +2246,15 @@ class IPTVPlayerApp(QMainWindow):
             selected_item_text = selected_item.text()
             selected_item_data = selected_item.data(Qt.UserRole)
 
-            #Check if All and Favorites category are not selected
-            if (selected_item_text != self.all_categories_text and selected_item_text != self.fav_categories_text):
+            #Determine which synthetic / normal category this is
+            if selected_item_text == self.all_categories_text:
+                self.category_view_mode[stream_type] = 'all'
+            elif selected_item_text == self.recent_categories_text:
+                self.category_view_mode[stream_type] = 'recent'
+            elif selected_item_text == self.fav_categories_text:
+                self.category_view_mode[stream_type] = 'fav'
+            else:
+                self.category_view_mode[stream_type] = 'category'
                 category_id = selected_item_data['category_id']
 
             self.set_progress_bar(0, "Loading items")
@@ -2204,14 +2271,19 @@ class IPTVPlayerApp(QMainWindow):
             self.streaming_list_widgets[stream_type].scrollToTop()
 
             is_favorites_view = (selected_item_text == self.fav_categories_text)
+            is_recent_view    = (selected_item_text == self.recent_categories_text)
 
-            # For the Favorites view, walk the favorites.json id list so items
-            # appear in the order the user marked them — not alphabetically and not
-            # in the order the provider returned the catalog (issue #17).
-            if is_favorites_view:
-                ordered_entries = self._favorites_in_user_order(stream_type)
+            # Favorites and Recently-watched are "ordered" views: walk the stored
+            # list so items appear in the user's order (fav add-order / recency),
+            # not alphabetically and not in provider-catalog order (issue #17).
+            if is_favorites_view or is_recent_view:
+                if is_recent_view:
+                    ordered_entries = self._recents_in_user_order(stream_type)
+                else:
+                    ordered_entries = self._favorites_in_user_order(stream_type)
                 for entry in ordered_entries:
-                    item = QListWidgetItem(entry['name'])
+                    display = entry.get('name') or entry.get('title') or 'Unknown'
+                    item = QListWidgetItem(display)
                     item.setData(Qt.UserRole, entry)
                     self.currently_loaded_streams[stream_type].append(entry)
                     self.streaming_list_widgets[stream_type].addItem(item)
@@ -2237,9 +2309,10 @@ class IPTVPlayerApp(QMainWindow):
                 item = QListWidgetItem("No items in list...")
 
                 self.streaming_list_widgets[stream_type].addItem(item)
-            elif not is_favorites_view:
-                #Sort list — but never re-sort the Favorites list, since that would
-                #destroy the user's add-order (issue #17).
+            elif not is_favorites_view and not is_recent_view:
+                #Sort list — but never re-sort the Favorites / Recently-watched
+                #lists, since that would destroy the user's add-order / recency
+                #(issue #17).
                 self.sortList(self.streaming_search_bars[stream_type], 'streaming', stream_type, self.streaming_list_widgets, self.sorting_enabled, self.sorting_order)
 
             self.animate_progress(0, 100, "Loading finished")
@@ -2528,6 +2601,25 @@ class IPTVPlayerApp(QMainWindow):
             #Save to previous double clicked item
             self.prev_double_clicked_streaming_item = clicked_item
 
+            #Which section's list emitted this double-click
+            section = {
+                self.streaming_list_live:   'LIVE',
+                self.streaming_list_movies: 'Movies',
+                self.streaming_list_series: 'Series',
+            }.get(self.sender())
+
+            #In the "Recently watched" view items are replayed directly: they may
+            #be series episodes that don't carry the stream_type the navigation
+            #routing below relies on. Playing also re-promotes them to the top.
+            if section and self.category_view_mode.get(section) == 'recent':
+                if clicked_item_text == self.go_back_text:
+                    return
+                url = (clicked_item_data or {}).get('url')
+                if url:
+                    self._add_to_recents(section, clicked_item_data)
+                    self.play_item(url)
+                return
+
             #Have different action depending on the navigation level
             match self.series_navigation_level:
                 case 0: #Highest level, either LIVE, VOD or series
@@ -2535,6 +2627,7 @@ class IPTVPlayerApp(QMainWindow):
                         return
 
                     if 'live' in stream_type or 'movie' in stream_type:
+                        self._add_to_recents(section, clicked_item_data)
                         self.play_item(clicked_item_data['url'])
 
                     elif 'series' in stream_type:
@@ -2557,6 +2650,7 @@ class IPTVPlayerApp(QMainWindow):
                         
                     else:
                         #Play episode
+                        self._add_to_recents('Series', clicked_item_data)
                         self.play_item(clicked_item_data['url'])
 
         except Exception as e:
@@ -3130,6 +3224,10 @@ class IPTVPlayerApp(QMainWindow):
                 self._player_screen = PlayerScreen(self)
                 self._player_screen.back_clicked.connect(self._on_player_back)
                 self._player_screen.set_video(tv)
+                # Keep the PlayerScreen's floating Back button in sync with the
+                # auto-hiding controls overlay (it lives outside TVRoot, so the
+                # chrome wake/hide can't reach it without this hook).
+                tv.set_chrome_sync(self._player_screen.set_chrome_visible)
                 self._v3_stack.addWidget(self._player_screen)
             playlist, current_idx, title = self._collect_visible_playlist(url)
             section = getattr(self, '_v3_current_section', None) or ''
@@ -3310,14 +3408,8 @@ class IPTVPlayerApp(QMainWindow):
 
                 #if search bar is empty
                 if not text:
-                    # Add 'All' and 'Favorites' categories to top
-                    itemAll = QListWidgetItem(self.all_categories_text)
-                    itemAll.setData(Qt.UserRole, {'category_name': self.all_categories_text})
-                    self.category_list_widgets[stream_type].insertItem(0, itemAll)
-
-                    itemFav = QListWidgetItem(self.fav_categories_text)
-                    itemFav.setData(Qt.UserRole, {'category_name': self.fav_categories_text})
-                    self.category_list_widgets[stream_type].insertItem(1, itemFav)
+                    # Add synthetic categories pinned to the top
+                    self._insert_pseudo_categories(stream_type)
 
                 #Check if no search results found
                 num_of_items = self.category_list_widgets[stream_type].count()
