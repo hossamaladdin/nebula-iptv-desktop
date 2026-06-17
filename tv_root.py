@@ -488,6 +488,7 @@ class TVRoot(QWidget):
         self.btn_playlist = QPushButton("\U0001f4cb") # 📋 show playlist
         self.btn_ar     = QPushButton("AR")            # aspect ratio
         self.btn_pin    = QPushButton("\U0001f4cc")    # 📌 always-on-top
+        self.btn_mini   = QPushButton("\U0001f5bc")    # 🖼 mini-player
         self.btn_mute   = QPushButton("\U0001f50a")
         self.btn_fs     = QPushButton("⛶")
         self.vol_slider = QSlider(Qt.Horizontal)
@@ -510,7 +511,7 @@ class TVRoot(QWidget):
         for b in (self.btn_prev, self.btn_rewind, self.btn_play, self.btn_ffwd,
                   self.btn_next, self.btn_slow, self.btn_fast,
                   self.btn_subs, self.btn_copy, self.btn_playlist, self.btn_ar,
-                  self.btn_pin, self.btn_mute, self.btn_fs):
+                  self.btn_pin, self.btn_mini, self.btn_mute, self.btn_fs):
             b.setObjectName("tvCtrlBtn")
             b.setCursor(Qt.PointingHandCursor)
             b.setFocusPolicy(Qt.NoFocus)
@@ -526,6 +527,7 @@ class TVRoot(QWidget):
         self.btn_ar.setToolTip("Aspect ratio (Auto / 16:9 / 4:3 / 1:1)")
         self.btn_pin.setToolTip("Keep window always on top (toggle)")
         self.btn_pin.setCheckable(True)
+        self.btn_mini.setToolTip("Mini-player (compact floating window)")
 
         self.btn_play.clicked.connect(self.toggle_play_pause)
         self.btn_rewind.clicked.connect(lambda: self.seek_by(-10000))
@@ -537,6 +539,7 @@ class TVRoot(QWidget):
         self.btn_playlist.clicked.connect(self._show_playlist_menu)
         self.btn_ar.clicked.connect(self._show_aspect_ratio_menu)
         self.btn_pin.toggled.connect(self._toggle_always_on_top)
+        self.btn_mini.clicked.connect(self._request_mini_player)
         self.btn_mute.clicked.connect(self.toggle_mute)
         self.btn_fs.clicked.connect(self.toggle_fullscreen)
         self.vol_slider.valueChanged.connect(self.set_volume)
@@ -580,6 +583,7 @@ class TVRoot(QWidget):
         btn_row.addWidget(self.btn_copy)
         btn_row.addWidget(self.btn_subs)
         btn_row.addWidget(self.btn_pin)
+        btn_row.addWidget(self.btn_mini)
         btn_row.addSpacing(6)
         btn_row.addWidget(self.btn_mute)
         btn_row.addWidget(self.vol_slider)
@@ -666,7 +670,14 @@ class TVRoot(QWidget):
 
     def stop(self):
         try:
+            # Mute first — on Windows with HW decode, player.stop() is
+            # asynchronous and the audio buffer drains audibly after return.
+            # Silencing immediately prevents the "ghost audio" on Back.
+            self.player.audio_set_mute(True)
             self.player.stop()
+            # Detach the media so VLC fully tears down the decode pipeline
+            # instead of leaving it in a half-stopped state.
+            self.player.set_media(None)
         except Exception:
             pass
 
@@ -1141,6 +1152,19 @@ class TVRoot(QWidget):
         if self._chrome_sync:
             try:
                 self._chrome_sync(visible)
+            except Exception:
+                pass
+
+    def set_mini_player_callback(self, callback):
+        """Register a zero-argument callback the host calls to enter/exit mini
+        mode. TVRoot fires it when the user clicks the 🖼 mini-player button."""
+        self._mini_player_cb = callback
+
+    def _request_mini_player(self):
+        cb = getattr(self, '_mini_player_cb', None)
+        if cb:
+            try:
+                cb()
             except Exception:
                 pass
 

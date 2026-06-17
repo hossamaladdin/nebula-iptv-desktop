@@ -23,7 +23,7 @@ from PyQt5.QtGui import QFont, QPixmap, QIcon
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QStackedWidget,
     QPushButton, QLabel, QFrame, QSplitter, QSizePolicy, QComboBox,
-    QMenu, QAction,
+    QMenu, QAction, QSizeGrip,
 )
 
 
@@ -494,6 +494,208 @@ class BrowseScreen(QWidget):
         self.bar.set_theme(effective)
 
 
+class MiniPlayerWindow(QWidget):
+    """Compact floating player: frameless, always-on-top, freely resizable.
+
+    Reparents the live TVRoot widget (with its playing VLC instance) into
+    itself so the stream never drops.  The host app hands the TVRoot over
+    with `attach()` and gets it back with `detach()` when the user exits.
+
+    The window has no title bar — the user drags it by pressing anywhere on
+    the dark overlay strip at the top.  Three micro-buttons sit in that
+    strip: play/pause, mute, and ✕ (return to normal player).
+    """
+
+    exit_requested = pyqtSignal()   # user clicked ✕ → host should call detach()
+
+    _BAR_H = 36          # height of the drag strip / button bar
+
+    _STYLE = """
+    MiniPlayerWindow {
+        background: black;
+        border: 1px solid rgba(255,255,255,30);
+        border-radius: 6px;
+    }
+    QWidget#miniBar {
+        background: rgba(20,20,28,220);
+        border-bottom: 1px solid rgba(255,255,255,20);
+    }
+    QPushButton#miniBtn {
+        background: rgba(255,255,255,15);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        padding: 2px 8px;
+        min-width: 30px;
+        min-height: 26px;
+    }
+    QPushButton#miniBtn:hover { background: rgba(94,129,172,200); }
+    QPushButton#miniExitBtn {
+        background: rgba(191,97,106,180);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: bold;
+        padding: 2px 8px;
+        min-width: 30px;
+        min-height: 26px;
+    }
+    QPushButton#miniExitBtn:hover { background: rgba(220,80,90,220); }
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_TranslucentBackground, False)
+        self.setAttribute(Qt.WA_DeleteOnClose, False)
+        self.setMinimumSize(200, 150)
+        self.resize(400, 260)
+        self.setStyleSheet(self._STYLE)
+        self._tv_root = None
+        self._drag_pos = None
+
+        root_lay = QVBoxLayout(self)
+        root_lay.setContentsMargins(0, 0, 0, 0)
+        root_lay.setSpacing(0)
+
+        # --- top drag/button bar ---
+        self._bar = QWidget(self)
+        self._bar.setObjectName("miniBar")
+        self._bar.setFixedHeight(self._BAR_H)
+        bar_lay = QHBoxLayout(self._bar)
+        bar_lay.setContentsMargins(6, 4, 6, 4)
+        bar_lay.setSpacing(4)
+
+        self._btn_play = QPushButton("⏯")
+        self._btn_play.setObjectName("miniBtn")
+        self._btn_play.setToolTip("Play / Pause  (Space)")
+        self._btn_play.setFocusPolicy(Qt.NoFocus)
+        self._btn_play.clicked.connect(self._on_play)
+
+        self._btn_mute = QPushButton("\U0001f50a")   # 🔊
+        self._btn_mute.setObjectName("miniBtn")
+        self._btn_mute.setToolTip("Mute / Unmute")
+        self._btn_mute.setFocusPolicy(Qt.NoFocus)
+        self._btn_mute.clicked.connect(self._on_mute)
+
+        self._lbl_title = QLabel()
+        self._lbl_title.setStyleSheet("color: rgba(216,222,233,180); font-size: 12px;")
+        self._lbl_title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self._lbl_title.setAlignment(Qt.AlignCenter)
+
+        self._btn_exit = QPushButton("✕  Normal player")
+        self._btn_exit.setObjectName("miniExitBtn")
+        self._btn_exit.setToolTip("Return to normal player")
+        self._btn_exit.setFocusPolicy(Qt.NoFocus)
+        self._btn_exit.clicked.connect(self.exit_requested.emit)
+
+        bar_lay.addWidget(self._btn_play)
+        bar_lay.addWidget(self._btn_mute)
+        bar_lay.addWidget(self._lbl_title, 1)
+        bar_lay.addWidget(self._btn_exit)
+
+        # --- video host ---
+        self._video_host = QWidget(self)
+        self._video_host.setStyleSheet("background: black;")
+        vh_lay = QVBoxLayout(self._video_host)
+        vh_lay.setContentsMargins(0, 0, 0, 0)
+        vh_lay.setSpacing(0)
+
+        # --- resize grip (bottom-right corner) ---
+        self._grip = QSizeGrip(self)
+        self._grip.setFixedSize(16, 16)
+
+        root_lay.addWidget(self._bar)
+        root_lay.addWidget(self._video_host, 1)
+
+    def attach(self, tv_root):
+        """Reparent tv_root into this window (keeps the VLC stream alive)."""
+        self._tv_root = tv_root
+        lay = self._video_host.layout()
+        while lay.count():
+            it = lay.takeAt(0)
+            if it.widget():
+                it.widget().setParent(None)
+        tv_root.setParent(self._video_host)
+        tv_root.show()
+        lay.addWidget(tv_root, 1)
+        # Suppress normal chrome (controls bar, hamburger) — the mini bar
+        # provides its own play/mute.  TVRoot's internal chrome was already
+        # disabled by the host, so we only need to hide the controls widget.
+        tv_root.controls.hide()
+        tv_root._hide_timer.stop()
+        # Sync mute icon to current state
+        self._sync_mute_icon()
+        self._lbl_title.setText(getattr(tv_root, '_current_title', '') or '')
+
+    def detach(self):
+        """Remove tv_root from this window and return it; caller re-hosts it."""
+        if self._tv_root is None:
+            return None
+        tv = self._tv_root
+        self._tv_root = None
+        lay = self._video_host.layout()
+        while lay.count():
+            it = lay.takeAt(0)
+            if it.widget():
+                it.widget().setParent(None)
+        # Restore normal chrome auto-hide behaviour
+        tv.controls.show()
+        tv._wake_chrome()
+        return tv
+
+    # ---------------------------------------------------------------- buttons
+    def _on_play(self):
+        if self._tv_root:
+            self._tv_root.toggle_play_pause()
+            playing = not getattr(self._tv_root, '_is_paused', False)
+            self._btn_play.setText("⏯" if playing else "▶")
+
+    def _on_mute(self):
+        if self._tv_root:
+            self._tv_root.toggle_mute()
+            self._sync_mute_icon()
+
+    def _sync_mute_icon(self):
+        if self._tv_root:
+            muted = getattr(self._tv_root, '_is_muted', False)
+            self._btn_mute.setText("\U0001f507" if muted else "\U0001f50a")
+
+    # -------------------------------------------------------- frameless drag
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton and self._bar.geometry().contains(event.pos()):
+            self._drag_pos = event.globalPos() - self.frameGeometry().topLeft()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.LeftButton and self._drag_pos is not None:
+            self.move(event.globalPos() - self._drag_pos)
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+        super().mouseReleaseEvent(event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Keep grip anchored to bottom-right
+        self._grip.move(self.width() - self._grip.width(),
+                        self.height() - self._grip.height())
+        self._grip.raise_()
+
+    def keyPressEvent(self, event):
+        if self._tv_root and event.key() == Qt.Key_Space:
+            self._on_play()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+
 class PlayerScreen(QWidget):
     """Full-bleed player screen — video fills 100% of the window, no surrounding
     margins or back bar eating space. A small floating Back button sits in the
@@ -504,6 +706,8 @@ class PlayerScreen(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setStyleSheet("background: black;")
+        self._tv_root = None
+        self._mini_win = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -516,10 +720,7 @@ class PlayerScreen(QWidget):
         host_lay.setSpacing(0)
         layout.addWidget(self.video_host)
 
-        # Floating back button overlay. Hosting widget is a wrapper so the
-        # QPushButton's widget-rectangle doesn't paint outside the rounded
-        # shape — without this, on some platforms a faint dark square shows
-        # behind the rounded button as a "hidden black box".
+        # Floating back button overlay.
         self.back_btn = QPushButton("◀  Back", self)
         self.back_btn.setAttribute(Qt.WA_TranslucentBackground, True)
         self.back_btn.setStyleSheet(
@@ -534,6 +735,7 @@ class PlayerScreen(QWidget):
         self.back_btn.raise_()
 
     def set_video(self, tv_root):
+        self._tv_root = tv_root
         # Replace any previous video widget.
         host_lay = self.video_host.layout()
         while host_lay.count():
@@ -544,12 +746,67 @@ class PlayerScreen(QWidget):
         tv_root.setParent(self.video_host)
         tv_root.show()
         host_lay.addWidget(tv_root, 1)
+        # Wire the mini-player button on TVRoot to this screen's toggle
+        tv_root.set_mini_player_callback(self.toggle_mini_player)
+
+    def toggle_mini_player(self):
+        """Enter or exit mini-player mode."""
+        if self._mini_win is not None and self._mini_win.isVisible():
+            self._exit_mini()
+        else:
+            self._enter_mini()
+
+    def _enter_mini(self):
+        if self._tv_root is None:
+            return
+        if self._mini_win is None:
+            self._mini_win = MiniPlayerWindow()
+            self._mini_win.exit_requested.connect(self._exit_mini)
+        # Position near the bottom-right of the screen
+        from PyQt5.QtWidgets import QApplication
+        screen_geo = QApplication.primaryScreen().availableGeometry()
+        self._mini_win.move(screen_geo.right() - self._mini_win.width() - 24,
+                            screen_geo.bottom() - self._mini_win.height() - 24)
+        self._mini_win.attach(self._tv_root)
+        self._mini_win.show()
+        self._mini_win.raise_()
+        # Show a placeholder in the main window so it doesn't go black
+        self._placeholder_lbl = QLabel("Mini-player active", self.video_host)
+        self._placeholder_lbl.setAlignment(Qt.AlignCenter)
+        self._placeholder_lbl.setStyleSheet(
+            "color: rgba(216,222,233,120); font-size: 18px; background: black;")
+        self._placeholder_lbl.setGeometry(self.video_host.rect())
+        self._placeholder_lbl.show()
+
+    def _exit_mini(self):
+        if self._mini_win is None:
+            return
+        tv = self._mini_win.detach()
+        self._mini_win.hide()
+        if tv is not None:
+            # Restore TVRoot into this screen's host
+            host_lay = self.video_host.layout()
+            while host_lay.count():
+                it = host_lay.takeAt(0)
+                if it.widget():
+                    it.widget().setParent(None)
+            tv.setParent(self.video_host)
+            tv.show()
+            host_lay.addWidget(tv, 1)
+        # Remove placeholder
+        pl = getattr(self, '_placeholder_lbl', None)
+        if pl:
+            pl.deleteLater()
+            self._placeholder_lbl = None
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.back_btn.adjustSize()
         self.back_btn.move(14, 14)
         self.back_btn.raise_()
+        pl = getattr(self, '_placeholder_lbl', None)
+        if pl:
+            pl.setGeometry(self.video_host.rect())
 
     def set_chrome_visible(self, visible):
         if visible:
