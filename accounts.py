@@ -5,6 +5,12 @@ import time
 import requests
 import subprocess
 import configparser
+
+def _make_config():
+    """ConfigParser that preserves key case (default lowercases everything)."""
+    c = configparser.ConfigParser()
+    c.optionxform = str
+    return c
 import re
 import json
 import html
@@ -77,7 +83,7 @@ class AccountManager(QtWidgets.QDialog):
     def set_startup_credentials(self):
         selected_item = self.startup_account_options.currentText()
 
-        config = configparser.ConfigParser()
+        config = _make_config()
         config.read(self.parent.user_data_file)
 
         if 'Startup credentials' not in config:
@@ -95,7 +101,7 @@ class AccountManager(QtWidgets.QDialog):
         self.startup_account_options.clear()
         self.startup_account_options.addItem("None")
 
-        config = configparser.ConfigParser()
+        config = _make_config()
         config.read(self.parent.user_data_file)
 
         if 'Credentials' in config:
@@ -115,7 +121,7 @@ class AccountManager(QtWidgets.QDialog):
 
         if selected_item:
             name = selected_item.text()
-            config = configparser.ConfigParser()
+            config = _make_config()
             config.read(self.parent.user_data_file)
 
             if 'Credentials' in config and name in config['Credentials']:
@@ -158,7 +164,7 @@ class AccountManager(QtWidgets.QDialog):
 
     def save_credentials(self, credentials_dict):
         # Load the configuration file
-        config = configparser.ConfigParser()
+        config = _make_config()
         config.read(self.parent.user_data_file)
 
         # Extract the credentials from the dictionary
@@ -198,7 +204,7 @@ class AccountManager(QtWidgets.QDialog):
         if selected_item:
             name = selected_item.text()
 
-            config = configparser.ConfigParser()
+            config = _make_config()
             config.read(self.parent.user_data_file)
 
             if 'Credentials' in config and name in config['Credentials']:
@@ -239,7 +245,7 @@ class AccountManager(QtWidgets.QDialog):
         if selected_item:
             name = selected_item.text()
 
-            config = configparser.ConfigParser()
+            config = _make_config()
             config.read(self.parent.user_data_file)
 
             if 'Credentials' in config and name in config['Credentials']:

@@ -5,6 +5,12 @@ import time
 import requests
 import subprocess
 import configparser
+
+def _make_config():
+    """ConfigParser that preserves key case (default lowercases everything)."""
+    c = configparser.ConfigParser()
+    c.optionxform = str
+    return c
 import re
 import json
 import html
@@ -449,8 +455,11 @@ class IPTVPlayerApp(QMainWindow):
             self.showFullScreen()
 
     def _on_esc(self):
-        # Priority: leave fullscreen if we're in it; otherwise go back from
-        # the player screen (and stop the media).
+        # Do nothing when mini-player is active — ESC has no meaning here and
+        # calling _on_player_back would try to stop TVRoot that's in the mini window.
+        ps = getattr(self, '_player_screen', None)
+        if ps and getattr(getattr(ps, '_mini_win', None), 'isVisible', lambda: False)():
+            return
         if self.isFullScreen():
             self.showNormal()
             return
@@ -463,7 +472,7 @@ class IPTVPlayerApp(QMainWindow):
     def updateUserDataFile(self):
         # Load the configuration file. A corrupted .ini must not crash the app —
         # fall back to a fresh config so the user can re-add accounts.
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError) as e:
@@ -885,7 +894,7 @@ class IPTVPlayerApp(QMainWindow):
     def loadDefaultSortingOrder(self):
         sorting_order = ""
 
-        config = configparser.ConfigParser()
+        config = _make_config()
         config.read(self.user_data_file)
 
         if 'Sorting order' in config:
@@ -968,7 +977,7 @@ class IPTVPlayerApp(QMainWindow):
 
         self.setAllSortingOrder(sorting_order)
 
-        config = configparser.ConfigParser()
+        config = _make_config()
         config.read(self.user_data_file)
 
         config['Sorting order'] = {'Order': sorting_order}
@@ -1067,7 +1076,7 @@ class IPTVPlayerApp(QMainWindow):
         self.current_user_agent = user_agent
 
         #Save selected user agent to userdata
-        config = configparser.ConfigParser()
+        config = _make_config()
         config.read(self.user_data_file)
 
         config['User-Agent'] = {'user-agent': user_agent}
@@ -1077,11 +1086,11 @@ class IPTVPlayerApp(QMainWindow):
 
     def loadDefaultUserAgent(self):
         #Read userdata config file
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
+            config = _make_config()
 
         #Check if defined in config. Otherwise set to default
         if config.has_option('User-Agent', 'user-agent'):
@@ -1094,11 +1103,11 @@ class IPTVPlayerApp(QMainWindow):
 
     def loadDefaultVODs(self):
         #Read userdata config file
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
+            config = _make_config()
 
         #Check if defined in config. Otherwise set to default
         if config.has_option('VOD', 'enabled'):
@@ -1126,7 +1135,7 @@ class IPTVPlayerApp(QMainWindow):
                 raise Exception(f"Value entered is not valid: {value}!")
 
             #Save selected user agent to userdata
-            config = configparser.ConfigParser()
+            config = _make_config()
             config.read(self.user_data_file)
 
             #If Timeouts section not yet exists create it
@@ -1163,7 +1172,7 @@ class IPTVPlayerApp(QMainWindow):
     def loadDefaultTimeout(self):
         try:
             #Read userdata config file
-            config = configparser.ConfigParser()
+            config = _make_config()
             config.read(self.user_data_file)
 
             #Set default values
@@ -1251,7 +1260,7 @@ class IPTVPlayerApp(QMainWindow):
     def toggleAutoUpdate(self, state):
         checked = bool(state)
 
-        config = configparser.ConfigParser()
+        config = _make_config()
         config.read(self.user_data_file)
 
         config['Updater'] = {'auto-update-checker': checked}
@@ -1265,11 +1274,11 @@ class IPTVPlayerApp(QMainWindow):
         # window appeared, which blocked startup of the V3 home screen until
         # the user dismissed the dialog. The checkbox stays in Settings so
         # users can still flip it on if they want.
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
+            config = _make_config()
 
         enabled = False
         if config.has_option('Updater', 'auto-update-checker'):
@@ -1334,7 +1343,7 @@ class IPTVPlayerApp(QMainWindow):
     def loadStartupCredentials(self):
         # Load playlist on startup if enabled. A malformed/missing key here used to crash
         # the app right after the login screen (issue #92), so every access is guarded.
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError) as e:
@@ -1493,11 +1502,11 @@ class IPTVPlayerApp(QMainWindow):
 
     def themeChanged(self, theme_name):
         self._apply_theme(theme_name)
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
+            config = _make_config()
         config['Theme'] = {'mode': theme_name}
         try:
             with open(self.user_data_file, 'w') as config_file:
@@ -1506,11 +1515,11 @@ class IPTVPlayerApp(QMainWindow):
             print(f"Could not write user data file: {e}")
 
     def loadDefaultTheme(self):
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
+            config = _make_config()
         mode = "System"
         if config.has_option("Theme", "mode"):
             mode = config["Theme"]["mode"]
@@ -1533,11 +1542,11 @@ class IPTVPlayerApp(QMainWindow):
             except Exception:
                 pass
 
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
+            config = _make_config()
         config['StreamStatus'] = {'enabled': str(checked)}
         try:
             with open(self.user_data_file, 'w') as config_file:
@@ -1546,11 +1555,11 @@ class IPTVPlayerApp(QMainWindow):
             print(f"Could not write user data file: {e}")
 
     def loadDefaultStreamStatus(self):
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
+            config = _make_config()
 
         if config.has_option('StreamStatus', 'enabled'):
             self.stream_status_enabled = (config['StreamStatus']['enabled'] == 'True')
@@ -1568,7 +1577,7 @@ class IPTVPlayerApp(QMainWindow):
         self.tab_widget.setTabEnabled(1, checked)
         self.tab_widget.setTabEnabled(2, checked)
 
-        config = configparser.ConfigParser()
+        config = _make_config()
         config.read(self.user_data_file)
         config['VOD'] = {'enabled': checked}
         with open(self.user_data_file, 'w') as config_file:
@@ -1656,15 +1665,21 @@ class IPTVPlayerApp(QMainWindow):
             self.animate_progress(0, 100, "Error extracting credentials")
             return False
 
+    def set_browse_status(self, text):
+        """Push a diagnostic message to the status bar on all 3 browse screens."""
+        for screen in (getattr(self, '_browse_screens', None) or {}).values():
+            try:
+                screen.set_status(text)
+            except Exception:
+                pass
+
     def set_progress_text(self, text):
-        # The progress bar is hidden in V3 mode but workers still post updates.
-        # Guard against the (rare) case where its C++ peer got deleted across
-        # a setCentralWidget swap.
         try:
             self.progress_bar.setFormat(text)
             QtWidgets.qApp.processEvents()
         except RuntimeError:
             pass
+        self.set_browse_status(text)
 
     def set_progress_bar(self, val, text):
         try:
@@ -1673,6 +1688,7 @@ class IPTVPlayerApp(QMainWindow):
             QtWidgets.qApp.processEvents()
         except RuntimeError:
             pass
+        self.set_browse_status(text)
 
     def animate_progress(self, start, end, text):
         try:
@@ -1684,6 +1700,7 @@ class IPTVPlayerApp(QMainWindow):
             QtWidgets.qApp.processEvents()
         except RuntimeError:
             pass
+        self.set_browse_status(text)
 
     def login(self):
         # When logging into another server, reset the progress bar
@@ -1713,11 +1730,69 @@ class IPTVPlayerApp(QMainWindow):
     def fetch_data_thread(self):
         dataWorker = FetchDataWorker(self.server, self.username, self.password, self.live_url_format, self.movie_url_format, self.series_url_format, self, self.vods_enabled)
         dataWorker.signals.finished.connect(self.process_data)
+        dataWorker.signals.section_ready.connect(self.process_section)
         dataWorker.signals.error.connect(self.on_fetch_data_error)
         dataWorker.signals.progress_bar.connect(self.animate_progress)
         dataWorker.signals.show_error_msg.connect(self.show_error_msg)
         dataWorker.signals.show_info_msg.connect(self.show_info_msg)
         self.threadpool.start(dataWorker)
+
+    def process_section(self, stream_type, categories, entries):
+        """Called as soon as one section finishes loading — populates that
+        category/stream list immediately without waiting for the other two."""
+        try:
+            self.categories_per_stream_type[stream_type] = categories
+            self.entries_per_stream_type[stream_type]    = entries
+            self.set_browse_status(f"Loaded {stream_type}")
+            # Reuse the existing per-section population logic from process_data
+            self._populate_section(stream_type, categories, entries)
+        except Exception as e:
+            import logging; logging.error("process_section(%s) failed: %s", stream_type, e)
+
+    def _populate_section(self, stream_type, categories, entries):
+        """Populate one section's category list and streaming list."""
+        try:
+            # Mark favorites
+            id_field = 'series_id' if stream_type == 'Series' else 'stream_id'
+            fav_key  = 'series_ids' if stream_type == 'Series' else 'stream_ids'
+            fav_ids  = set()
+            try:
+                import json as _json
+                with open(self.favorites_file, 'r') as f:
+                    fav_ids = set((_json.load(f) or {}).get(fav_key) or [])
+            except Exception:
+                pass
+            for entry in entries:
+                entry['favorite'] = entry.get(id_field) in fav_ids
+                if not entry.get('name'):
+                    entry['name'] = entry.get('title') or "(untitled)"
+                entry['stream_type'] = (
+                    'live' if stream_type == 'LIVE' else
+                    'movie' if stream_type == 'Movies' else 'series')
+                if stream_type != 'Series':
+                    fmt = self.live_url_format if stream_type == 'LIVE' else self.movie_url_format
+                    sid = entry.get('stream_id', '')
+                    ext = entry.get('container_extension', 'ts')
+                    entry['url'] = fmt.format(
+                        server=self.server, username=self.username,
+                        password=self.password, stream_id=sid,
+                        container_extension=ext)
+
+            self.currently_loaded_categories[stream_type] = list(categories)
+            self.currently_loaded_streams[stream_type]    = []
+
+            lw = self.category_list_widgets[stream_type]
+            lw.clear()
+            for cat in categories:
+                item = QtWidgets.QListWidgetItem(cat.get('category_name', ''))
+                item.setData(Qt.UserRole, cat)
+                lw.addItem(item)
+            self.sortList(
+                self.category_search_bars[stream_type], 'category',
+                stream_type, self.category_list_widgets,
+                self.sorting_enabled, self.sorting_order)
+        except Exception as e:
+            import logging; logging.error("_populate_section(%s) failed: %s", stream_type, e)
 
     def process_data(self, iptv_info, categories_per_stream_type, entries_per_stream_type):
         print("Going to process IPTV data now")
@@ -3014,11 +3089,11 @@ class IPTVPlayerApp(QMainWindow):
     def _links_set_default_account(self, name):
         if getattr(self, '_links_startup_combo_block', False):
             return
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
-            config = configparser.ConfigParser()
+            config = _make_config()
         config['Startup credentials'] = {'startup_credentials': name or 'None'}
         try:
             with open(self.user_data_file, 'w') as fp:
@@ -3030,7 +3105,7 @@ class IPTVPlayerApp(QMainWindow):
         if not hasattr(self, '_links_list'):
             return
         self._links_list.clear()
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
@@ -3064,7 +3139,7 @@ class IPTVPlayerApp(QMainWindow):
         name = self._links_selected_name()
         if not name:
             return
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
@@ -3118,7 +3193,7 @@ class IPTVPlayerApp(QMainWindow):
                                 f"Delete '{name}'?",
                                 QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
             return
-        config = configparser.ConfigParser()
+        config = _make_config()
         try:
             config.read(self.user_data_file)
         except (configparser.Error, UnicodeDecodeError):
@@ -3231,10 +3306,10 @@ class IPTVPlayerApp(QMainWindow):
                 self._player_screen = PlayerScreen(self)
                 self._player_screen.back_clicked.connect(self._on_player_back)
                 self._player_screen.set_video(tv)
-                # Keep the PlayerScreen's floating Back button in sync with the
-                # auto-hiding controls overlay (it lives outside TVRoot, so the
-                # chrome wake/hide can't reach it without this hook).
                 tv.set_chrome_sync(self._player_screen.set_chrome_visible)
+                # Mini-player exit goes home (index 0) and stops the stream
+                self._player_screen.set_go_home_callback(
+                    lambda: self._v3_stack.setCurrentIndex(0))
                 self._v3_stack.addWidget(self._player_screen)
             playlist, current_idx, title = self._collect_visible_playlist(url)
             section = getattr(self, '_v3_current_section', None) or ''
@@ -3255,6 +3330,30 @@ class IPTVPlayerApp(QMainWindow):
             self._v3_history.append(self._v3_stack.currentIndex())
             self._v3_animate_to(target_idx, direction='left')
             return
+
+    def closeEvent(self, event):
+        # Mute + stop VLC before the window is destroyed so the audio pipeline
+        # can't outlive the process when closed via taskbar or the window X button.
+        tv = getattr(self, '_tv_root', None)
+        if tv is not None:
+            try:
+                tv.player.audio_set_mute(True)
+                tv.player.stop()
+                tv.player.set_media(None)
+                tv.player.release()
+                tv.instance.release()
+            except Exception:
+                pass
+        # Close the mini-player window if it's floating
+        ps = getattr(self, '_player_screen', None)
+        if ps is not None:
+            mw = getattr(ps, '_mini_win', None)
+            if mw is not None:
+                try:
+                    mw.close()
+                except Exception:
+                    pass
+        event.accept()
 
     def _on_player_back(self):
         # Always drop out of fullscreen first — otherwise the user lands on the

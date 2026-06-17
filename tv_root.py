@@ -12,7 +12,7 @@ layout still works for users who want the legacy look.
 import sys
 import os
 
-from PyQt5.QtCore import Qt, QSize, QEvent, QPropertyAnimation, QEasingCurve, pyqtSignal, QTimer
+from PyQt5.QtCore import Qt, QSize, QEvent, QPropertyAnimation, QEasingCurve, QObject, pyqtSignal, QTimer
 from PyQt5.QtGui import QPalette, QColor, QCursor
 from PyQt5.QtWidgets import (
     QWidget, QFrame, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel,
@@ -207,7 +207,7 @@ QWidget#tvControls {
                                 stop:0 rgba(0,0,0,60), stop:1 rgba(0,0,0,210));
 }
 QPushButton#tvCtrlBtn {
-    background: rgba(45, 45, 48, 130);
+    background: transparent;
     color: white;
     border: none;
     border-radius: 6px;
@@ -215,8 +215,8 @@ QPushButton#tvCtrlBtn {
     font-size: 16px;
     min-width: 34px;
 }
-QPushButton#tvCtrlBtn:hover { background: rgba(91, 141, 239, 220); }
-QPushButton#tvCtrlBtn:disabled { color: #888; background: rgba(45,45,48,60); }
+QPushButton#tvCtrlBtn:hover { background: rgba(91, 141, 239, 180); }
+QPushButton#tvCtrlBtn:disabled { color: rgba(255,255,255,40); background: transparent; }
 QLabel#tvTimeLabel { color: #eee; font-size: 11px; padding: 0 8px; }
 QSlider#tvSeek::groove:horizontal { height: 6px; background: rgba(255,255,255,70); border-radius: 3px; }
 QSlider#tvSeek::handle:horizontal { background: #7c3aed; width: 14px; margin: -4px 0; border-radius: 7px; }
@@ -410,7 +410,12 @@ class TVRoot(QWidget):
         # shows/hides in lock-step with the controls overlay. Without this the
         # Back button stayed permanently visible while the rest of the chrome
         # auto-hid, in both normal and fullscreen views.
-        self._chrome_sync = None
+        self._chrome_sync    = None
+        self._mini_mode      = False   # True while hosted in MiniPlayerWindow
+        self._mini_wake_cb   = None    # called by _wake_chrome in mini mode
+        self._vlc_hwnd_hooked = None
+        self._vlc_wndproc_ref = None
+        self._vlc_wndproc_old = None
 
         # Whether TVRoot draws its own hamburger / sliding menu / edge trigger.
         # In V3 (progressive-screens mode) the menu and back nav are owned by
@@ -549,8 +554,10 @@ class TVRoot(QWidget):
         # ⏮ / ⏭ are wired by the host app (it knows the playlist) — exposed
         # as signals so the host can connect to its own next/prev.
         self.next_requested = pyqtSignal  # placeholder; real signal below
-        # Re-define via a tiny inner emitter so pyqtSignal lives on a QObject:
-        class _ButtonSignals(QWidget):
+        # Re-define via a tiny inner emitter so pyqtSignal lives on a QObject.
+        # Use QObject, not QWidget — a QWidget here creates a visible (0,0,100,30)
+        # black rectangle at the top-left of the video in mini mode.
+        class _ButtonSignals(QObject):
             next_requested = pyqtSignal()
             prev_requested = pyqtSignal()
         self._signals = _ButtonSignals(self)
@@ -659,10 +666,18 @@ class TVRoot(QWidget):
         self._bound = False
         self._bind_video_output()
 
-        self._current_url = url
+        self._current_url   = url
         self._current_title = title or ""
-        self._is_paused = False
+        self._is_paused     = False
         self.btn_play.setText("⏯")
+        # stop() mutes VLC to prevent ghost audio; unmute on next play so new
+        # streams don't start silently with a "correct-looking" mute icon.
+        self._is_muted = False
+        try:
+            self.player.audio_set_mute(False)
+        except Exception:
+            pass
+        self.btn_mute.setText("\U0001f50a")
 
         media = self.instance.media_new(url)
         self.player.set_media(media)
@@ -1155,6 +1170,71 @@ class TVRoot(QWidget):
             except Exception:
                 pass
 
+    def install_mini_hittest_hook(self):
+        """Windows only: subclass VLC's DirectX child HWND so WM_NCHITTEST is
+        forwarded to the containing MiniPlayerWindow.  Critical: use c_ssize_t
+        (ULONG_PTR) not c_long/c_int for GetWindowLongPtrW — the old WndProc
+        pointer is 64 bits on x64; truncating it to 32 bits corrupts the
+        pointer and crashes the app when the hook is uninstalled."""
+        if not sys.platform.startswith('win'):
+            return
+        try:
+            import ctypes, ctypes.wintypes as wt
+            user32 = ctypes.windll.user32
+            user32.GetWindowLongPtrW.restype  = ctypes.c_ssize_t
+            user32.SetWindowLongPtrW.restype  = ctypes.c_ssize_t
+            user32.SetWindowLongPtrW.argtypes = [wt.HWND, ctypes.c_int, ctypes.c_ssize_t]
+            user32.CallWindowProcW.restype    = ctypes.c_ssize_t
+            user32.SendMessageW.restype       = ctypes.c_ssize_t
+            user32.IsWindow.restype           = ctypes.c_bool
+
+            vf_hwnd  = int(self.video_frame.winId())
+            vlc_hwnd = user32.GetWindow(vf_hwnd, 5)   # GW_CHILD
+            if not vlc_hwnd:
+                from PyQt5.QtCore import QTimer
+                QTimer.singleShot(250, self.install_mini_hittest_hook)
+                return
+            mini_win = self.window()
+            if not mini_win:
+                return
+            mini_hwnd = int(mini_win.winId())
+            WNDPROC = ctypes.WINFUNCTYPE(
+                ctypes.c_ssize_t, wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM)
+            old = user32.GetWindowLongPtrW(vlc_hwnd, -4)
+            def _hook(hwnd, msg, wp, lp):
+                if msg == 0x0084:
+                    return user32.SendMessageW(mini_hwnd, msg, wp, lp)
+                return user32.CallWindowProcW(old, hwnd, msg, wp, lp)
+            proc = WNDPROC(_hook)
+            user32.SetWindowLongPtrW(vlc_hwnd, -4, proc)
+            self._vlc_hwnd_hooked = vlc_hwnd
+            self._vlc_wndproc_ref  = proc
+            self._vlc_wndproc_old  = old
+            import logging; logging.info("Mini hit-test hook installed (VLC HWND %d)", vlc_hwnd)
+        except Exception as e:
+            import logging; logging.error("install_mini_hittest_hook: %s", e)
+
+    def uninstall_mini_hittest_hook(self):
+        if not sys.platform.startswith('win'):
+            return
+        try:
+            if not self._vlc_hwnd_hooked:
+                return
+            import ctypes, ctypes.wintypes as wt
+            user32 = ctypes.windll.user32
+            user32.SetWindowLongPtrW.restype  = ctypes.c_ssize_t
+            user32.SetWindowLongPtrW.argtypes = [wt.HWND, ctypes.c_int, ctypes.c_ssize_t]
+            user32.IsWindow.restype = ctypes.c_bool
+            if user32.IsWindow(self._vlc_hwnd_hooked):
+                user32.SetWindowLongPtrW(
+                    self._vlc_hwnd_hooked, -4, self._vlc_wndproc_old)
+        except Exception as e:
+            import logging; logging.error("uninstall_mini_hittest_hook: %s", e)
+        finally:
+            self._vlc_hwnd_hooked = None
+            self._vlc_wndproc_ref  = None
+            self._vlc_wndproc_old  = None
+
     def set_mini_player_callback(self, callback):
         """Register a zero-argument callback the host calls to enter/exit mini
         mode. TVRoot fires it when the user clicks the 🖼 mini-player button."""
@@ -1165,8 +1245,9 @@ class TVRoot(QWidget):
         if cb:
             try:
                 cb()
-            except Exception:
-                pass
+            except Exception as e:
+                import logging, traceback
+                logging.error("Mini-player toggle failed: %s\n%s", e, traceback.format_exc())
 
     def disable_internal_chrome(self):
         """Suppress the hamburger / sliding menu / edge trigger forever.
@@ -1180,6 +1261,14 @@ class TVRoot(QWidget):
             pass
 
     def _wake_chrome(self):
+        if self._mini_mode:
+            # Forward the wake signal to the mini window's button overlay
+            if self._mini_wake_cb:
+                try:
+                    self._mini_wake_cb()
+                except Exception:
+                    pass
+            return
         self.controls.show()
         if self._show_internal_chrome:
             self.hamburger.show()
@@ -1191,6 +1280,8 @@ class TVRoot(QWidget):
             self._hide_timer.stop()
 
     def _hide_chrome(self):
+        if self._mini_mode:
+            return
         if self._show_internal_chrome and self.menu.is_open():
             return
         if not self.player.is_playing():
@@ -1202,6 +1293,14 @@ class TVRoot(QWidget):
         self.video_frame.setCursor(Qt.BlankCursor)
 
     def _poll_state(self):
+        try:
+            # Capture the real video AR while playing so mini mode can use it
+            # reliably (video_get_size may return 0,0 right after a rebind).
+            vw, vh = self.player.video_get_size(0)
+            if vw and vh:
+                self._video_ar = vw / vh
+        except Exception:
+            pass
         try:
             length = self.player.get_length()
             cur    = self.player.get_time()
@@ -1279,10 +1378,9 @@ class TVRoot(QWidget):
                 # the spacebar and the on-screen Play button.
                 self.toggle_play_pause()
                 return True
-        if et == QEvent.MouseButtonDblClick and not on_controls:
-            # Only LEFT double-click toggles fullscreen. Middle-button double-
-            # clicks were spuriously firing fullscreen before — now they're
-            # treated as two play/pause toggles.
+        if et == QEvent.MouseButtonDblClick and not on_controls and not self._mini_mode:
+            # Only LEFT double-click toggles fullscreen — and never in mini mode
+            # (would fullscreen the MiniPlayerWindow, not the main window).
             try:
                 btn = event.button()
             except Exception:
@@ -1324,22 +1422,26 @@ class TVRoot(QWidget):
         if self._placeholder is not None:
             self._placeholder.setGeometry(0, 0, self.video_frame.width(), self.video_frame.height())
 
-        # Phase 2 chrome positions:
-        self.hamburger.move(10, 10)
-        self.hamburger.raise_()
-        self.edge_trigger.setGeometry(0, self.hamburger.height() + 14,
-                                      self.edge_trigger.width(), self.height() - self.hamburger.height() - 14)
-        self.edge_trigger.raise_()
-        if self.menu.is_open():
-            self.menu.setGeometry(0, 0, self.menu.width(), self.height())
-        else:
-            self.menu.move(-self.menu.width(), 0)
-            self.menu.resize(self.menu.width(), self.height())
+        # Phase 2 chrome positions — skip entirely in mini mode.
+        if not self._mini_mode:
+            self.hamburger.move(10, 10)
+            self.hamburger.raise_()
+            self.edge_trigger.setGeometry(0, self.hamburger.height() + 14,
+                                          self.edge_trigger.width(), self.height() - self.hamburger.height() - 14)
+            self.edge_trigger.raise_()
+            if self.menu.is_open():
+                self.menu.setGeometry(0, 0, self.menu.width(), self.height())
+            else:
+                self.menu.move(-self.menu.width(), 0)
+                self.menu.resize(self.menu.width(), self.height())
 
         # Phase 3 controls: bottom 110 px, full width.
+        # Skip in mini mode — controls must stay hidden; repositioning would
+        # un-hide them and produce the black overlay artifact in the PiP window.
         ch = 110
-        self.controls.setGeometry(0, self.height() - ch, self.width(), ch)
-        self.controls.raise_()
+        if not self._mini_mode:
+            self.controls.setGeometry(0, self.height() - ch, self.width(), ch)
+            self.controls.raise_()
 
         # Playlist panel: right-anchored, full height (minus bottom controls).
         # If hidden, park it just off-screen so the slide-in animation has

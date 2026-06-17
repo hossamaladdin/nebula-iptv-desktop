@@ -18,12 +18,13 @@ reparented into the new screens so all the existing wiring (clicks, filters,
 favorites, etc.) keeps working.
 """
 
-from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QPoint, QSize, pyqtSignal
+import sys
+from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QPoint, QSize, QRect, QTimer, pyqtSignal
 from PyQt5.QtGui import QFont, QPixmap, QIcon
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QStackedWidget,
     QPushButton, QLabel, QFrame, QSplitter, QSizePolicy, QComboBox,
-    QMenu, QAction, QSizeGrip,
+    QMenu, QAction, QApplication,
 )
 
 
@@ -466,6 +467,8 @@ class BrowseScreen(QWidget):
         self.body_layout.setContentsMargins(20, 0, 20, 20)
         self.body_layout.setSpacing(10)
 
+        self._init_status_bar()
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -485,6 +488,45 @@ class BrowseScreen(QWidget):
         widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         widget.show()
         self.body_layout.addWidget(widget, 1)
+        self.body_layout.addWidget(self._status_bar)  # always last
+
+    def set_status(self, text):
+        """Show a diagnostic message in the status bar at the bottom."""
+        if not text:
+            self._status_bar.hide()
+            return
+        self._status_lbl.setText(text)
+        self._status_bar.show()
+        # Auto-clear non-error messages after 4 s
+        if not any(w in text.lower() for w in ('error', 'fail', 'timeout', 'lost', 'invalid')):
+            self._status_timer.start(4000)
+        else:
+            self._status_timer.stop()
+        # Colour: red for errors, amber for warnings, grey for info
+        if any(w in text.lower() for w in ('error', 'fail', 'timeout', 'invalid')):
+            colour = "rgba(220,60,60,200)"
+        elif any(w in text.lower() for w in ('connect', 'loading', 'fetching', 'wait')):
+            colour = "rgba(100,160,240,200)"
+        else:
+            colour = "rgba(160,160,160,180)"
+        self._status_lbl.setStyleSheet(
+            f"color: {colour}; font-size: 11px; padding: 0 8px;")
+
+    def _init_status_bar(self):
+        self._status_bar = QWidget(self)
+        self._status_bar.setFixedHeight(22)
+        self._status_bar.setStyleSheet(
+            "background: rgba(0,0,0,120); border-top: 1px solid rgba(255,255,255,15);")
+        sl = QHBoxLayout(self._status_bar)
+        sl.setContentsMargins(6, 0, 6, 0)
+        sl.setSpacing(0)
+        self._status_lbl = QLabel("", self._status_bar)
+        self._status_lbl.setStyleSheet("color: rgba(160,160,160,180); font-size: 11px; padding: 0 8px;")
+        sl.addWidget(self._status_lbl)
+        self._status_bar.hide()
+        self._status_timer = QTimer(self)
+        self._status_timer.setSingleShot(True)
+        self._status_timer.timeout.connect(lambda: self.set_status(""))
 
     def set_theme(self, effective):
         if effective == "Light":
@@ -494,206 +536,558 @@ class BrowseScreen(QWidget):
         self.bar.set_theme(effective)
 
 
+class _FlatIconBtn(QLabel):
+    """Transparent icon button using QLabel + mouse events.
+
+    QPushButton cannot be made truly transparent on Windows — Fusion style always
+    paints a platform-specific background for hover/focus states regardless of CSS
+    or setFlat().  QLabel with background:transparent works reliably because it
+    doesn't go through QStyle's button-chrome rendering path.
+    """
+    clicked = pyqtSignal()
+
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setAlignment(Qt.AlignCenter)
+        self.setStyleSheet("background: transparent; color: white;")
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAutoFillBackground(False)
+        self.setCursor(Qt.PointingHandCursor)
+        self._pressed = False
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._pressed = True
+            self.setStyleSheet("background: transparent; color: rgba(255,255,255,170);")
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.setStyleSheet("background: transparent; color: white;")
+            if self._pressed and self.rect().contains(event.pos()):
+                self.clicked.emit()
+            self._pressed = False
+        super().mouseReleaseEvent(event)
+
+class _CloseBtn(QWidget):
+    """Elegant circular close button — draws a rounded rect with an × inside.
+    Used for the mini player dismiss button (top-right corner)."""
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAutoFillBackground(False)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setFixedSize(28, 28)
+        self._hovered = False
+        self._pressed = False
+        self.setMouseTracking(True)
+
+    def paintEvent(self, event):
+        from PyQt5.QtGui import QPainter, QPainterPath, QColor, QPen
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        w, h = self.width(), self.height()
+        # Background circle
+        if self._pressed:
+            bg = QColor(220, 50, 50, 220)
+        elif self._hovered:
+            bg = QColor(180, 40, 40, 180)
+        else:
+            bg = QColor(60, 60, 60, 140)
+        path = QPainterPath()
+        path.addEllipse(1, 1, w - 2, h - 2)
+        p.fillPath(path, bg)
+        # × cross
+        pen = QPen(QColor(255, 255, 255, 230))
+        pen.setWidthF(1.8)
+        pen.setCapStyle(Qt.RoundCap)
+        p.setPen(pen)
+        m = 8
+        p.drawLine(m, m, w - m, h - m)
+        p.drawLine(w - m, m, m, h - m)
+        p.end()
+
+    def enterEvent(self, e):   self._hovered = True;  self.update(); super().enterEvent(e)
+    def leaveEvent(self, e):   self._hovered = False; self._pressed = False; self.update(); super().leaveEvent(e)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._pressed = True; self.update()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            fired = self._pressed and self.rect().contains(event.pos())
+            self._pressed = False; self.update()
+            if fired:
+                self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+
+class _MiniOverlay(QWidget):
+    """Separate transparent top-level window that floats over MiniPlayerWindow.
+
+    WA_TranslucentBackground enables DWM composition on Windows so the video
+    shows through every unpainted pixel — buttons appear as pure floating icons.
+    nativeEvent returns HTTRANSPARENT for the non-button area so all clicks and
+    hover events pass through to MiniPlayerWindow's WM_NCHITTEST handler (drag,
+    resize, wake).  HTCLIENT is returned only for actual button areas so Qt
+    dispatches those clicks to the buttons normally.
+    """
+
+    play_clicked   = pyqtSignal()
+    mute_clicked   = pyqtSignal()
+    expand_clicked = pyqtSignal()
+
+    def __init__(self, mini_win):
+        super().__init__(None,
+            Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self._mini_win = mini_win
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setAttribute(Qt.WA_NoMousePropagation, False)
+        self.setWindowOpacity(1.0)
+
+        self._btn_mute  = _FlatIconBtn("\U0001f50a", self)
+        self._btn_play  = _FlatIconBtn("⏸",         self)
+        self._btn_close = _CloseBtn(self)
+        for b in (self._btn_mute, self._btn_play):
+            f = b.font(); f.setPointSize(22); b.setFont(f)
+            b.setFocusPolicy(Qt.NoFocus)
+        self._btn_close.setFocusPolicy(Qt.NoFocus)
+        self._btn_mute.setToolTip("Mute / Unmute")
+        self._btn_play.setToolTip("Play / Pause")
+        self._btn_close.setToolTip("Return to normal player")
+        self._btn_mute.clicked.connect(self.mute_clicked)
+        self._btn_play.clicked.connect(self.play_clicked)
+        self._btn_close.clicked.connect(self.expand_clicked)
+
+        self._htimer = QTimer(self)
+        self._htimer.setSingleShot(True)
+        self._htimer.timeout.connect(self.hide)
+
+    # ---------------------------------------------------------------- sync
+    def sync(self):
+        """Match geometry exactly to the mini player window (full coverage).
+        The CompositionMode_Clear paintEvent ensures truly transparent alpha
+        everywhere there's no button — no black box."""
+        if self._mini_win:
+            self.setGeometry(self._mini_win.geometry())
+            self._reposition()
+            if self.isVisible():
+                self.raise_()
+
+    def _reposition(self):
+        bw, bh = 44, 44
+        gap = 12
+        cw = self._btn_close.width()
+        ch = self._btn_close.height()
+        # ✕ — top-right corner
+        self._btn_close.move(self.width() - cw - 8, 8)
+        # mute + play — centered horizontally at bottom
+        total = bw * 2 + gap
+        x = (self.width() - total) // 2
+        y = self.height() - bh - 14
+        self._btn_mute.setGeometry(x,            y, bw, bh)
+        self._btn_play.setGeometry(x + bw + gap, y, bw, bh)
+
+    def wake(self):
+        self.sync()
+        self.show()
+        self.raise_()
+        self._htimer.start(1500)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._reposition()
+
+    def paintEvent(self, event):
+        # Explicitly clear to transparent so DWM alpha is properly initialised.
+        # paintEvent: pass leaves the alpha channel uninitialized on some Windows
+        # configurations, rendering as opaque black where no button is painted.
+        from PyQt5.QtGui import QPainter, QColor
+        p = QPainter(self)
+        p.setCompositionMode(QPainter.CompositionMode_Clear)
+        p.fillRect(self.rect(), QColor(0, 0, 0, 0))
+        p.end()
+
+    # --- pass non-button events through to the window beneath ---------------
+    def nativeEvent(self, eventType, message):
+        if sys.platform.startswith('win') and eventType == b'windows_generic_MSG':
+            try:
+                import ctypes, ctypes.wintypes
+                msg = ctypes.wintypes.MSG.from_address(int(message))
+                if msg.message == 0x0084:   # WM_NCHITTEST
+                    gx = ctypes.c_short(msg.lParam & 0xFFFF).value
+                    gy = ctypes.c_short((msg.lParam >> 16) & 0xFFFF).value
+                    pos = self.mapFromGlobal(QPoint(gx, gy))
+                    for btn in (self._btn_mute, self._btn_play, self._btn_close):
+                        if btn.geometry().contains(pos):
+                            return True, 1    # HTCLIENT — button receives click
+                    return True, -1           # HTTRANSPARENT — pass to video/drag
+            except Exception:
+                pass
+        return super().nativeEvent(eventType, message)
+
+    def sync_icons(self, is_paused, is_muted):
+        self._btn_play.setText("▶" if is_paused else "⏸")
+        self._btn_mute.setText("\U0001f507" if is_muted else "\U0001f50a")
+
+
 class MiniPlayerWindow(QWidget):
-    """Compact floating player: frameless, always-on-top, freely resizable.
+    """Chrome-PiP-style mini player.
 
-    Reparents the live TVRoot widget (with its playing VLC instance) into
-    itself so the stream never drops.  The host app hands the TVRoot over
-    with `attach()` and gets it back with `detach()` when the user exits.
-
-    The window has no title bar — the user drags it by pressing anywhere on
-    the dark overlay strip at the top.  Three micro-buttons sit in that
-    strip: play/pause, mute, and ✕ (return to normal player).
+    - Pure video, completely frameless.
+    - On hover: 3 white icon buttons appear centered at the bottom:
+        [🔇 mute]   [⏸ play/pause]   [⛶ expand]
+      Transparent background, no colored backgrounds, auto-hide after 1.5s.
+    - Expand resumes the normal player (stream keeps playing, no stop).
+    - Drag: anywhere on video.
+    - Resize: QApplication event filter (works with VLC's child HWND);
+      always AR-constrained.
     """
 
-    exit_requested = pyqtSignal()   # user clicked ✕ → host should call detach()
+    expand_requested = pyqtSignal()   # expand → restore normal player
 
-    _BAR_H = 36          # height of the drag strip / button bar
-
-    _STYLE = """
-    MiniPlayerWindow {
-        background: black;
-        border: 1px solid rgba(255,255,255,30);
-        border-radius: 6px;
-    }
-    QWidget#miniBar {
-        background: rgba(20,20,28,220);
-        border-bottom: 1px solid rgba(255,255,255,20);
-    }
-    QPushButton#miniBtn {
-        background: rgba(255,255,255,15);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 16px;
-        padding: 2px 8px;
-        min-width: 30px;
-        min-height: 26px;
-    }
-    QPushButton#miniBtn:hover { background: rgba(94,129,172,200); }
-    QPushButton#miniExitBtn {
-        background: rgba(191,97,106,180);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 13px;
-        font-weight: bold;
-        padding: 2px 8px;
-        min-width: 30px;
-        min-height: 26px;
-    }
-    QPushButton#miniExitBtn:hover { background: rgba(220,80,90,220); }
-    """
+    _E = 8   # resize edge margin px
 
     def __init__(self, parent=None):
         super().__init__(parent, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-        self.setAttribute(Qt.WA_TranslucentBackground, False)
         self.setAttribute(Qt.WA_DeleteOnClose, False)
-        self.setMinimumSize(200, 150)
-        self.resize(400, 260)
-        self.setStyleSheet(self._STYLE)
-        self._tv_root = None
-        self._drag_pos = None
+        self.setMinimumSize(160, 90)
+        self.resize(400, 225)
+        self.setStyleSheet("background: black;")
 
-        root_lay = QVBoxLayout(self)
-        root_lay.setContentsMargins(0, 0, 0, 0)
-        root_lay.setSpacing(0)
+        self._tv_root     = None
+        self._ar          = 16 / 9
+        self._drag_pos    = None
+        self._resize_edge = None
+        self._resize_sgeo = None
+        self._resize_spos = None
 
-        # --- top drag/button bar ---
-        self._bar = QWidget(self)
-        self._bar.setObjectName("miniBar")
-        self._bar.setFixedHeight(self._BAR_H)
-        bar_lay = QHBoxLayout(self._bar)
-        bar_lay.setContentsMargins(6, 4, 6, 4)
-        bar_lay.setSpacing(4)
+        # Video host — fills entire window
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        self._vhost = QWidget(self)
+        self._vhost.setStyleSheet("background: black;")
+        vh = QVBoxLayout(self._vhost)
+        vh.setContentsMargins(0, 0, 0, 0)
+        vh.setSpacing(0)
+        lay.addWidget(self._vhost, 1)
 
-        self._btn_play = QPushButton("⏯")
-        self._btn_play.setObjectName("miniBtn")
-        self._btn_play.setToolTip("Play / Pause  (Space)")
-        self._btn_play.setFocusPolicy(Qt.NoFocus)
-        self._btn_play.clicked.connect(self._on_play)
+        # Separate DWM-transparent overlay window for buttons (no HWND painting)
+        self._overlay = _MiniOverlay(self)
+        self._overlay.play_clicked.connect(self._on_play)
+        self._overlay.mute_clicked.connect(self._on_mute)
+        self._overlay.expand_clicked.connect(self.expand_requested.emit)
 
-        self._btn_mute = QPushButton("\U0001f50a")   # 🔊
-        self._btn_mute.setObjectName("miniBtn")
-        self._btn_mute.setToolTip("Mute / Unmute")
-        self._btn_mute.setFocusPolicy(Qt.NoFocus)
-        self._btn_mute.clicked.connect(self._on_mute)
-
-        self._lbl_title = QLabel()
-        self._lbl_title.setStyleSheet("color: rgba(216,222,233,180); font-size: 12px;")
-        self._lbl_title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        self._lbl_title.setAlignment(Qt.AlignCenter)
-
-        self._btn_exit = QPushButton("✕  Normal player")
-        self._btn_exit.setObjectName("miniExitBtn")
-        self._btn_exit.setToolTip("Return to normal player")
-        self._btn_exit.setFocusPolicy(Qt.NoFocus)
-        self._btn_exit.clicked.connect(self.exit_requested.emit)
-
-        bar_lay.addWidget(self._btn_play)
-        bar_lay.addWidget(self._btn_mute)
-        bar_lay.addWidget(self._lbl_title, 1)
-        bar_lay.addWidget(self._btn_exit)
-
-        # --- video host ---
-        self._video_host = QWidget(self)
-        self._video_host.setStyleSheet("background: black;")
-        vh_lay = QVBoxLayout(self._video_host)
-        vh_lay.setContentsMargins(0, 0, 0, 0)
-        vh_lay.setSpacing(0)
-
-        # --- resize grip (bottom-right corner) ---
-        self._grip = QSizeGrip(self)
-        self._grip.setFixedSize(16, 16)
-
-        root_lay.addWidget(self._bar)
-        root_lay.addWidget(self._video_host, 1)
-
+    # ----------------------------------------------------------------- attach
     def attach(self, tv_root):
-        """Reparent tv_root into this window (keeps the VLC stream alive)."""
         self._tv_root = tv_root
-        lay = self._video_host.layout()
+        tv_root._mini_mode = True
+        # Hide AND park every TVRoot overlay far off-screen. hide() alone is
+        # insufficient — resizeEvent or wake_chrome can race and re-raise them
+        # before _mini_mode propagates, leaving visible boxes in the PiP window.
+        # Detach ALL overlay widgets from TVRoot's HWND tree entirely.
+        # hide()/move()/resize() are not enough — Qt can still paint them
+        # and VLC's DirectX z-ordering can let them bleed through.
+        # setParent(None) is the only guaranteed removal from the tree.
+        self._mini_orphaned = {}
+        for attr in ('controls', 'hamburger', 'menu', 'edge_trigger',
+                     'playlist_panel', '_sub_hide_strip'):
+            try:
+                w = getattr(tv_root, attr)
+                w.hide()
+                w.setParent(None)   # fully detach from TVRoot's HWND tree
+                self._mini_orphaned[attr] = w
+            except Exception:
+                pass
+        tv_root._hide_timer.stop()
+        QApplication.instance().processEvents()
+        # Reset VLC crop/scale so the video letterboxes naturally in mini mode
+        try:
+            tv_root.player.video_set_aspect_ratio(None)
+            tv_root.player.video_set_crop_geometry(None)
+            tv_root.player.video_set_scale(0)
+        except Exception:
+            pass
+        # Reparent TVRoot into the video host (VLC keeps playing)
+        lay = self._vhost.layout()
         while lay.count():
             it = lay.takeAt(0)
             if it.widget():
                 it.widget().setParent(None)
-        tv_root.setParent(self._video_host)
+        tv_root.setParent(self._vhost)
         tv_root.show()
         lay.addWidget(tv_root, 1)
-        # Suppress normal chrome (controls bar, hamburger) — the mini bar
-        # provides its own play/mute.  TVRoot's internal chrome was already
-        # disabled by the host, so we only need to hide the controls widget.
-        tv_root.controls.hide()
-        tv_root._hide_timer.stop()
-        # Sync mute icon to current state
-        self._sync_mute_icon()
-        self._lbl_title.setText(getattr(tv_root, '_current_title', '') or '')
+        # Re-bind VLC to the new native HWND — setParent() on Windows destroys
+        # and recreates the underlying HWND, so libvlc's render handle is stale
+        # (audio plays but video is black). Force rebind without restarting stream.
+        try:
+            tv_root._bound = False
+            tv_root._bind_video_output()
+        except Exception:
+            pass
+        self._sync_icons()
+        # Wire TVRoot mouse-move → wake overlay
+        tv_root._mini_wake_cb = self._wake
+        # AR from _poll_state
+        ar = getattr(tv_root, '_video_ar', None)
+        if ar and ar > 0.2:
+            self._ar = ar
+        self.resize(self.width(), max(90, int(self.width() / self._ar)))
+        # Install event filter on video_frame for Qt-level drag — same mechanism
+        # TVRoot already uses for _wake_chrome, guaranteed to receive mouse events
+        # even through VLC's DirectX child HWND.
+        # Allow TVRoot and video_frame to shrink to any size — Qt layouts otherwise
+        # enforce an implicit minimum from sizeHint, which stops VLC scaling below
+        # roughly 480p and causes cropping on further resize.
+        try:
+            tv_root.setMinimumSize(0, 0)
+            tv_root.video_frame.setMinimumSize(0, 0)
+        except Exception:
+            pass
+        # Clear any BlankCursor Qt set during _hide_chrome so resize cursors show
+        try:
+            tv_root.video_frame.unsetCursor()
+        except Exception:
+            pass
+        tv_root.video_frame.installEventFilter(self)
+        self._filtered_vf = tv_root.video_frame
+        # Also install WM_NCHITTEST hook for native resize (best-effort)
+        QTimer.singleShot(300, tv_root.install_mini_hittest_hook)
 
     def detach(self):
-        """Remove tv_root from this window and return it; caller re-hosts it."""
+        self._overlay.hide()
         if self._tv_root is None:
             return None
         tv = self._tv_root
         self._tv_root = None
-        lay = self._video_host.layout()
+        tv._mini_mode    = False
+        tv._mini_wake_cb = None
+        try:
+            if getattr(self, '_filtered_vf', None):
+                self._filtered_vf.removeEventFilter(self)
+                self._filtered_vf = None
+        except Exception:
+            pass
+        self._drag_pos = None
+        tv.uninstall_mini_hittest_hook()
+        # Re-parent overlay widgets back into TVRoot so the normal player works
+        for attr, w in getattr(self, '_mini_orphaned', {}).items():
+            try:
+                w.setParent(tv)
+                w.setUpdatesEnabled(True)
+            except Exception:
+                pass
+        self._mini_orphaned = {}
+        try:
+            tv._sub_hide_strip.resize(640, 60)
+        except Exception:
+            pass
+        lay = self._vhost.layout()
         while lay.count():
             it = lay.takeAt(0)
             if it.widget():
                 it.widget().setParent(None)
-        # Restore normal chrome auto-hide behaviour
-        tv.controls.show()
-        tv._wake_chrome()
-        return tv
+        return tv  # caller restores chrome AFTER reparenting to avoid freeze
 
-    # ---------------------------------------------------------------- buttons
+    # ----------------------------------------------------------------- buttons
     def _on_play(self):
-        if self._tv_root:
-            self._tv_root.toggle_play_pause()
-            playing = not getattr(self._tv_root, '_is_paused', False)
-            self._btn_play.setText("⏯" if playing else "▶")
+        if not self._tv_root:
+            return
+        self._tv_root.toggle_play_pause()
+        self._sync_icons()
 
     def _on_mute(self):
-        if self._tv_root:
-            self._tv_root.toggle_mute()
-            self._sync_mute_icon()
+        if not self._tv_root:
+            return
+        self._tv_root.toggle_mute()
+        self._sync_icons()
 
-    def _sync_mute_icon(self):
-        if self._tv_root:
-            muted = getattr(self._tv_root, '_is_muted', False)
-            self._btn_mute.setText("\U0001f507" if muted else "\U0001f50a")
+    def _sync_icons(self):
+        if not self._tv_root:
+            return
+        self._overlay.sync_icons(
+            getattr(self._tv_root, '_is_paused', False),
+            getattr(self._tv_root, '_is_muted',  False))
 
-    # -------------------------------------------------------- frameless drag
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton and self._bar.geometry().contains(event.pos()):
-            self._drag_pos = event.globalPos() - self.frameGeometry().topLeft()
-            event.accept()
-        else:
-            super().mousePressEvent(event)
+    # -------------------------------------------------------------- overlay
+    def _wake(self):
+        self._overlay.wake()
 
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.LeftButton and self._drag_pos is not None:
-            self.move(event.globalPos() - self._drag_pos)
-            event.accept()
-        else:
-            super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        self._drag_pos = None
-        super().mouseReleaseEvent(event)
-
+    # ---------------------------------------------------------------- layout
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # Keep grip anchored to bottom-right
-        self._grip.move(self.width() - self._grip.width(),
-                        self.height() - self._grip.height())
-        self._grip.raise_()
+        self._overlay.sync()
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self._overlay.sync()   # keep overlay aligned during native HTCAPTION drag
+
+    _EDGE_CURSORS = {
+        'L': Qt.SizeHorCursor,  'R': Qt.SizeHorCursor,
+        'T': Qt.SizeVerCursor,  'B': Qt.SizeVerCursor,
+        'TL': Qt.SizeFDiagCursor, 'BR': Qt.SizeFDiagCursor,
+        'TR': Qt.SizeBDiagCursor, 'BL': Qt.SizeBDiagCursor,
+    }
+    _E = 10   # resize edge zone px
+
+    def _edge_at(self, gpos):
+        lp = self.mapFromGlobal(gpos)
+        m, w, h = self._E, self.width(), self.height()
+        L = lp.x() < m;  R = lp.x() > w - m
+        T = lp.y() < m;  B = lp.y() > h - m
+        if L and T: return 'TL'
+        if R and T: return 'TR'
+        if L and B: return 'BL'
+        if R and B: return 'BR'
+        if L: return 'L'
+        if R: return 'R'
+        if T: return 'T'
+        if B: return 'B'
+        return None
+
+    def _do_resize(self, gpos):
+        e = self._resize_edge
+        dx = gpos.x() - self._resize_spos.x()
+        dy = gpos.y() - self._resize_spos.y()
+        g  = QRect(self._resize_sgeo)
+        ar = self._ar
+        mw, mh = 160, 90
+        # Width leads for L/R/corners; height leads for T/B
+        if 'R' in e:
+            nw = max(mw, g.width() + dx)
+        elif 'L' in e:
+            nw = max(mw, g.width() - dx)
+        else:
+            nh = max(mh, g.height() + (dy if 'B' in e else -dy))
+            nw = max(mw, int(nh * ar))
+        nh = max(mh, int(nw / ar))
+        nw = max(mw, int(nh * ar))
+        if 'L' in e: g.setLeft(g.right()   - nw)
+        else:         g.setRight(g.left()   + nw)
+        if 'T' in e: g.setTop(g.bottom()   - nh)
+        else:         g.setBottom(g.top()   + nh)
+        self.setGeometry(g)
+        # Tell VLC to re-scale to the new window size; without this VLC keeps
+        # its previous render dimensions and the window crops below ~480p.
+        if self._tv_root:
+            try:
+                self._tv_root.player.video_set_scale(0)
+            except Exception:
+                pass
+
+    def eventFilter(self, obj, event):
+        from PyQt5.QtCore import QEvent
+        et = event.type()
+        gp = getattr(event, 'globalPos', lambda: None)()
+
+        if et == QEvent.MouseMove:
+            if not gp:
+                return False
+            if self._resize_edge and (event.buttons() & Qt.LeftButton):
+                self._do_resize(gp)
+                self._overlay.sync()
+                return True
+            if self._drag_pos is not None and (event.buttons() & Qt.LeftButton):
+                self.move(gp - self._drag_pos)
+                self._overlay.sync()
+                return True
+            edge = self._edge_at(gp)
+            self.setCursor(self._EDGE_CURSORS[edge]) if edge else self.unsetCursor()
+            return False
+
+        if et == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+            if not gp:
+                return False
+            edge = self._edge_at(gp)
+            if edge:
+                self._resize_edge = edge
+                self._resize_sgeo = self.geometry()
+                self._resize_spos = gp
+            else:
+                self._drag_pos = gp - self.frameGeometry().topLeft()
+            return True
+
+        if et == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
+            self._drag_pos = self._resize_edge = self._resize_sgeo = self._resize_spos = None
+            return False
+
+        return False
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._overlay.sync()
+        self._overlay.show()
+        self._overlay.raise_()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self._overlay.hide()
 
     def keyPressEvent(self, event):
-        if self._tv_root and event.key() == Qt.Key_Space:
-            self._on_play()
-            event.accept()
+        if event.key() == Qt.Key_Space:
+            self._on_play(); event.accept()
         else:
             super().keyPressEvent(event)
+
+    # --- native drag + AR-constrained resize via WM_NCHITTEST / WM_SIZING ---
+    # VLC's DirectX child HWND intercepts WM_NCHITTEST before Qt sees it.
+    # The install_mini_hittest_hook() on TVRoot forwards WM_NCHITTEST from
+    # VLC's child HWND to this window so these handlers actually fire.
+    def nativeEvent(self, eventType, message):
+        if sys.platform.startswith('win') and eventType == b'windows_generic_MSG':
+            try:
+                import ctypes, ctypes.wintypes
+                msg = ctypes.wintypes.MSG.from_address(int(message))
+
+                if msg.message == 0x0084:   # WM_NCHITTEST
+                    gx = ctypes.c_short(msg.lParam & 0xFFFF).value
+                    gy = ctypes.c_short((msg.lParam >> 16) & 0xFFFF).value
+                    pos = self.mapFromGlobal(QPoint(gx, gy))
+                    # Button zone → HTCLIENT (Qt dispatches click normally)
+                    for btn in (self._btn_mute, self._btn_play, self._btn_close):
+                        if btn.geometry().contains(pos):
+                            return True, 1   # HTCLIENT
+                    m = self._E; w, h = self.width(), self.height()
+                    L = pos.x() < m;  R = pos.x() > w - m
+                    T = pos.y() < m;  B = pos.y() > h - m
+                    if L and T: return True, 13   # HTTOPLEFT
+                    if R and T: return True, 14   # HTTOPRIGHT
+                    if L and B: return True, 16   # HTBOTTOMLEFT
+                    if R and B: return True, 17   # HTBOTTOMRIGHT
+                    if L:       return True, 10   # HTLEFT
+                    if R:       return True, 11   # HTRIGHT
+                    if T:       return True, 12   # HTTOP
+                    if B:       return True, 15   # HTBOTTOM
+                    # Video area → HTCAPTION: OS handles drag natively
+                    return True, 2
+
+                elif msg.message == 0x0214:  # WM_SIZING — enforce AR
+                    ar   = self._ar
+                    side = msg.wParam
+                    rect = ctypes.wintypes.RECT.from_address(msg.lParam)
+                    w = rect.right  - rect.left
+                    h = rect.bottom - rect.top
+                    mw, mh = 160, 90
+                    if side in (3, 6):          # top/bottom: height leads
+                        nw = max(mw, int(h * ar))
+                        if side == 3: rect.left = rect.right - nw
+                        else:         rect.right = rect.left + nw
+                    else:                       # sides/corners: width leads
+                        nh = max(mh, int(w / ar))
+                        if side in (4, 5, 3):   # top corners/edge: keep bottom
+                            rect.top = rect.bottom - nh
+                        else:                   # bottom corners/edge: keep top
+                            rect.bottom = rect.top + nh
+                    return True, 1
+            except Exception:
+                pass
+        return super().nativeEvent(eventType, message)
 
 
 class PlayerScreen(QWidget):
@@ -756,35 +1150,45 @@ class PlayerScreen(QWidget):
         else:
             self._enter_mini()
 
+    def set_go_home_callback(self, cb):
+        """Called by the host app so _exit_mini can navigate home."""
+        self._go_home_cb = cb
+
     def _enter_mini(self):
         if self._tv_root is None:
             return
         if self._mini_win is None:
             self._mini_win = MiniPlayerWindow()
-            self._mini_win.exit_requested.connect(self._exit_mini)
-        # Position near the bottom-right of the screen
-        from PyQt5.QtWidgets import QApplication
-        screen_geo = QApplication.primaryScreen().availableGeometry()
-        self._mini_win.move(screen_geo.right() - self._mini_win.width() - 24,
-                            screen_geo.bottom() - self._mini_win.height() - 24)
-        self._mini_win.attach(self._tv_root)
+            self._mini_win.expand_requested.connect(self._exit_mini)
+        # Use the screen where the main window currently lives, not primaryScreen
+        main = self.window()
+        cur_screen = (QApplication.screenAt(main.geometry().center())
+                      if main else None) or QApplication.primaryScreen()
+        screen_geo = cur_screen.availableGeometry()
+
+        # Size: half the main window's width, height from AR
+        target_w = max(240, (main.width() if main else 800) // 2)
+        self._mini_win.resize(target_w, target_w)  # attach() will correct height
+        self._mini_win.attach(self._tv_root)        # snaps to real AR
+
+        self._mini_win.move(
+            screen_geo.right()  - self._mini_win.width()  - 100,
+            screen_geo.bottom() - self._mini_win.height() - 100,
+        )
         self._mini_win.show()
         self._mini_win.raise_()
-        # Show a placeholder in the main window so it doesn't go black
-        self._placeholder_lbl = QLabel("Mini-player active", self.video_host)
-        self._placeholder_lbl.setAlignment(Qt.AlignCenter)
-        self._placeholder_lbl.setStyleSheet(
-            "color: rgba(216,222,233,120); font-size: 18px; background: black;")
-        self._placeholder_lbl.setGeometry(self.video_host.rect())
-        self._placeholder_lbl.show()
+        main = self.window()
+        if main:
+            main.showMinimized()
 
     def _exit_mini(self):
+        """Expand: detach TVRoot, restore it to this screen, resume playing."""
         if self._mini_win is None:
             return
         tv = self._mini_win.detach()
         self._mini_win.hide()
         if tv is not None:
-            # Restore TVRoot into this screen's host
+            # Re-host TVRoot in this PlayerScreen (stream was never stopped)
             host_lay = self.video_host.layout()
             while host_lay.count():
                 it = host_lay.takeAt(0)
@@ -793,20 +1197,28 @@ class PlayerScreen(QWidget):
             tv.setParent(self.video_host)
             tv.show()
             host_lay.addWidget(tv, 1)
-        # Remove placeholder
-        pl = getattr(self, '_placeholder_lbl', None)
-        if pl:
-            pl.deleteLater()
-            self._placeholder_lbl = None
+            # Restore chrome NOW that TVRoot has a real parent again —
+            # doing it before reparenting (in detach) caused a freeze because
+            # Qt tried to repaint controls on a parentless top-level widget.
+            tv.controls.show()
+            tv._wake_chrome()
+            # Defer VLC rebind after window is shown (avoids brief UI block)
+            _tv = tv
+            QTimer.singleShot(80, lambda: (
+                setattr(_tv, '_bound', False) or _tv._bind_video_output()
+            ))
+        # Restore and focus the main window, staying on the player screen
+        main = self.window()
+        if main:
+            main.showNormal()
+            main.raise_()
+            main.activateWindow()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.back_btn.adjustSize()
         self.back_btn.move(14, 14)
         self.back_btn.raise_()
-        pl = getattr(self, '_placeholder_lbl', None)
-        if pl:
-            pl.setGeometry(self.video_host.rect())
 
     def set_chrome_visible(self, visible):
         if visible:

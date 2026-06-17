@@ -5,6 +5,11 @@ import time
 import requests
 import subprocess
 import configparser
+
+def _make_config():
+    c = configparser.ConfigParser()
+    c.optionxform = str
+    return c
 import re
 import json
 import html
@@ -39,6 +44,9 @@ LIVE_STATUS_TIMEOUT = 7
 
 class FetchDataWorkerSignals(QObject):
     finished        = pyqtSignal(dict, dict, dict)
+    # Emitted as soon as one section's categories + streams are ready so the
+    # UI can populate that tab immediately rather than waiting for all three.
+    section_ready   = pyqtSignal(str, list, list)   # stream_type, categories, entries
     error           = pyqtSignal(str)
     progress_bar    = pyqtSignal(int, int, str)
     show_error_msg  = pyqtSignal(str, str)
@@ -123,11 +131,11 @@ class FetchDataWorker(QRunnable):
                     #         "Please check if it is empty or corrupted.")
                     print("Failed loading cache file. Please check if it is empty or corrupted.")
 
-            config = configparser.ConfigParser()
+            config = _make_config()
             try:
                 config.read(self.parent.user_data_file)
             except (configparser.Error, UnicodeDecodeError):
-                config = configparser.ConfigParser()
+                config = _make_config()
 
             if config.has_option('Debug', 'load_with_cache') and config['Debug']['load_with_cache'] == 'True':   #For testing purposes only
                 categories_per_stream_type['LIVE'] = cached_data['LIVE categories']
@@ -248,10 +256,15 @@ class FetchDataWorker(QRunnable):
                         print("Failed fetching Live TV streams. Got them from cache.")
                     else:
                         #Display error msg that data fetching failed
-                        # self.signals.show_error_msg.emit('Failed fetching data from IPTV provider', 
+                        # self.signals.show_error_msg.emit('Failed fetching data from IPTV provider',
                         #     "Couldn't get Live TV streams from IPTV provider.\n"
                         #     "Please check your internet connection or if IPTV server is still online.")
                         print("Failed fetching Live TV streams")
+
+                # Live TV is fully ready — populate the UI immediately
+                self.signals.section_ready.emit('LIVE',
+                    categories_per_stream_type['LIVE'],
+                    entries_per_stream_type['LIVE'])
 
                 if self.fetch_vods:
                     print("Fetching Movies streaming data")
@@ -280,7 +293,12 @@ class FetchDataWorker(QRunnable):
                             # self.signals.show_error_msg.emit('Failed fetching data from IPTV provider', 
                             #     "Couldn't get Movies streams from IPTV provider.\n"
                             #     "Please check your internet connection or if IPTV server is still online.")
-                            print("Failed fetching Live TV streams")
+                            print("Failed fetching Movies streams")
+
+                    # Movies fully ready — populate now, don't wait for Series
+                    self.signals.section_ready.emit('Movies',
+                        categories_per_stream_type['Movies'],
+                        entries_per_stream_type['Movies'])
 
                 if self.fetch_vods:
                     print("Fetching Series streaming data")
@@ -310,6 +328,11 @@ class FetchDataWorker(QRunnable):
                             #     "Couldn't get Series streams from IPTV provider.\n"
                             #     "Please check your internet connection or if IPTV server is still online.")
                             print("Failed fetching Series streams")
+
+                    # Series fully ready
+                    self.signals.section_ready.emit('Series',
+                        categories_per_stream_type['Series'],
+                        entries_per_stream_type['Series'])
 
                 print("going to create cached data")
 
