@@ -642,8 +642,11 @@ class _MiniOverlay(QWidget):
     expand_clicked = pyqtSignal()
 
     def __init__(self, mini_win):
+        # Qt.Tool windows on macOS hide when the main window minimizes — use
+        # Qt.Window there so the overlay stays visible in mini-player mode.
+        _wtype = Qt.Window if sys.platform == "darwin" else Qt.Tool
         super().__init__(None,
-            Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+            _wtype | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self._mini_win = mini_win
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
@@ -754,7 +757,10 @@ class MiniPlayerWindow(QWidget):
     _E = 8   # resize edge margin px
 
     def __init__(self, parent=None):
-        super().__init__(parent, Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        # Qt.Tool windows hide on macOS when the main window minimizes — use
+        # Qt.Window there so the mini player survives the minimize call.
+        _wtype = Qt.Window if sys.platform == "darwin" else Qt.Tool
+        super().__init__(parent, _wtype | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.setAttribute(Qt.WA_DeleteOnClose, False)
         self.setMinimumSize(160, 90)
         self.resize(400, 225)
