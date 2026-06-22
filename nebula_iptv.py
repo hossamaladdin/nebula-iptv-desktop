@@ -433,6 +433,38 @@ class IPTVPlayerApp(QMainWindow):
         self._space_shortcut.setContext(Qt.ApplicationShortcut)
         self._space_shortcut.activated.connect(self._on_space)
 
+        for key, slot in (
+            (Qt.Key_Left,  lambda: self._on_player_arrow("left")),
+            (Qt.Key_Right, lambda: self._on_player_arrow("right")),
+            (Qt.Key_Up,    lambda: self._on_player_arrow("up")),
+            (Qt.Key_Down,  lambda: self._on_player_arrow("down")),
+        ):
+            sc = QShortcut(QKeySequence(key), self)
+            sc.setContext(Qt.ApplicationShortcut)
+            sc.activated.connect(slot)
+
+    def _on_player_arrow(self, direction):
+        """Arrow keys — seek ±10 s (Left/Right) or volume ±5 (Up/Down).
+        Only fires when the player screen is active and focus is not in a text field."""
+        from PyQt5.QtWidgets import QApplication
+        focused = QApplication.focusWidget()
+        if focused is not None and focused.metaObject().className() in ("QLineEdit", "QTextEdit"):
+            return
+        if getattr(self, '_tv_root', None) is None:
+            return
+        if not (hasattr(self, '_v3_stack') and self._player_screen is not None
+                and self._v3_stack.currentWidget() is self._player_screen):
+            return
+        tv = self._tv_root
+        if direction == "left":
+            tv.seek_by(-10000)
+        elif direction == "right":
+            tv.seek_by(10000)
+        elif direction == "up":
+            tv.vol_slider.setValue(min(100, tv.vol_slider.value() + 5))
+        elif direction == "down":
+            tv.vol_slider.setValue(max(0,   tv.vol_slider.value() - 5))
+
     def _on_space(self):
         # Only fire when we're on the player screen so the spacebar doesn't
         # interfere with text input elsewhere (the Add-account form,
