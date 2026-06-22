@@ -13,6 +13,75 @@ import sys
 import os
 
 from PyQt5.QtCore import Qt, QSize, QEvent, QPropertyAnimation, QEasingCurve, QObject, pyqtSignal, QTimer
+
+
+class _WakeLock:
+    """Prevent the OS from sleeping while media is playing.
+
+    macOS: IOPMAssertionCreateWithName (no extra deps, built into IOKit).
+    Windows: SetThreadExecutionState (kernel32).
+    Linux: no-op — most DEs respect XScreenSaverSuspend via VLC directly.
+    """
+
+    def __init__(self):
+        self._assertion_id = None   # macOS IOPMAssertion handle
+        self._acquired = False
+
+    def acquire(self):
+        if self._acquired:
+            return
+        try:
+            if sys.platform == "darwin":
+                import ctypes, ctypes.util
+                iokit = ctypes.cdll.LoadLibrary(ctypes.util.find_library("IOKit"))
+                cf    = ctypes.cdll.LoadLibrary(ctypes.util.find_library("CoreFoundation"))
+                cf.CFStringCreateWithCString.restype = ctypes.c_void_p
+                cf.CFStringCreateWithCString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint32]
+                kCFStringEncodingUTF8 = 0x08000100
+                reason = cf.CFStringCreateWithCString(None, b"NebulaIPTV media playback", kCFStringEncodingUTF8)
+                assertion_id = ctypes.c_uint32(0)
+                kIOPMAssertionTypeNoDisplaySleep = cf.CFStringCreateWithCString(
+                    None, b"NoDisplaySleepAssertion", kCFStringEncodingUTF8)
+                iokit.IOPMAssertionCreateWithName.restype = ctypes.c_int
+                iokit.IOPMAssertionCreateWithName.argtypes = [
+                    ctypes.c_void_p, ctypes.c_uint32, ctypes.c_void_p,
+                    ctypes.POINTER(ctypes.c_uint32)]
+                kIOPMAssertionLevelOn = 255
+                ret = iokit.IOPMAssertionCreateWithName(
+                    kIOPMAssertionTypeNoDisplaySleep,
+                    kIOPMAssertionLevelOn, reason,
+                    ctypes.byref(assertion_id))
+                if ret == 0:
+                    self._assertion_id = assertion_id.value
+            elif sys.platform.startswith("win"):
+                import ctypes
+                ES_CONTINUOUS        = 0x80000000
+                ES_SYSTEM_REQUIRED   = 0x00000001
+                ES_DISPLAY_REQUIRED  = 0x00000002
+                ctypes.windll.kernel32.SetThreadExecutionState(
+                    ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+        except Exception:
+            pass
+        self._acquired = True
+
+    def release(self):
+        if not self._acquired:
+            return
+        try:
+            if sys.platform == "darwin" and self._assertion_id is not None:
+                import ctypes, ctypes.util
+                iokit = ctypes.cdll.LoadLibrary(ctypes.util.find_library("IOKit"))
+                iokit.IOPMAssertionRelease(self._assertion_id)
+                self._assertion_id = None
+            elif sys.platform.startswith("win"):
+                import ctypes
+                ctypes.windll.kernel32.SetThreadExecutionState(0x80000000)  # ES_CONTINUOUS only
+        except Exception:
+            pass
+        self._acquired = False
+
+
+_wake_lock = _WakeLock()   # one shared instance for the process
 from PyQt5.QtGui import QPalette, QColor, QCursor
 from PyQt5.QtWidgets import (
     QWidget, QFrame, QVBoxLayout, QHBoxLayout, QStackedLayout, QLabel,
@@ -682,8 +751,10 @@ class TVRoot(QWidget):
         media = self.instance.media_new(url)
         self.player.set_media(media)
         self.player.play()
+        _wake_lock.acquire()
 
     def stop(self):
+        _wake_lock.release()
         try:
             # Mute first — on Windows with HW decode, player.stop() is
             # asynchronous and the audio buffer drains audibly after return.
